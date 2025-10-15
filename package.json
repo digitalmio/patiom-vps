@@ -12,5 +12,8 @@
   "packageManager": "pnpm@10.17.1",
   "dependencies": {
     "@biomejs/biome": "^2.2.5"
+  },
+  "devDependencies": {
+    "ultra-runner": "^3.10.5"
   }
 }
