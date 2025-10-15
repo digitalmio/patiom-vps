@@ -1,4 +1,7 @@
 packages:
-  - 'packages/*'
-  - 'apps/*'
-  - 'plugins'
+  - packages/*
+  - apps/*
+  - plugins
+
+ignoredBuiltDependencies:
+  - duckdb
