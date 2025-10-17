@@ -6,6 +6,8 @@ export const env = createEnv({
 		DATABASE_URL: z.string().min(1),
 		DATABASE_LOGGER: z.boolean().optional().default(false),
 
+		REDIS_URL: z.string().min(1).optional().default("redis://localhost:6379"),
+
 		BETTER_AUTH_SECRET: z.string().min(1),
 		BETTER_AUTH_URL: z.url().min(1),
 

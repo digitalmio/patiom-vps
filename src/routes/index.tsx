@@ -80,7 +80,6 @@ function App() {
 						safety.
 					</p>
 					<div className="flex flex-col items-center gap-4">
-						<a>LOGIN</a>
 						<a
 							href="https://tanstack.com/start"
 							target="_blank"
@@ -101,9 +100,9 @@ function App() {
 
 			<section className="py-16 px-6 max-w-7xl mx-auto">
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{features.map((feature, index) => (
+					{features.map((feature) => (
 						<div
-							key={index}
+							key={`feature-${feature.title}`}
 							className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
 						>
 							<div className="mb-4">{feature.icon}</div>
