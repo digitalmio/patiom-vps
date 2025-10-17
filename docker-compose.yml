@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # TimescaleDB - PostgreSQL with time-series extension
+  timescale:
+    image: timescale/timescaledb-ha:pg17
+    container_name: patiom-timescale
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: patiom
+      POSTGRES_PASSWORD: patiom_dev_password
+      POSTGRES_DB: patiom
+      # Enable TimescaleDB extension automatically
+      POSTGRES_INITDB_ARGS: "-c timescaledb.telemetry_level=off"
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patiom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - patiom-network
+
+  # Valkey - For BullMQ job queue (Redis-compatible, open source)
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: patiom-valkey
+    restart: unless-stopped
+    command: valkey-server --appendonly yes --requirepass patiom_redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - patiom-network
+
+volumes:
+  timescale_data:
+    driver: local
+  valkey_data:
+    driver: local
+
+networks:
+  patiom-network:
+    driver: bridge
