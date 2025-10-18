@@ -84,14 +84,15 @@ export const schemaFields = pgTable(
 		isNullable: boolean("is_nullable").default(true),
 		hasArguments: boolean("has_arguments").default(false),
 		argumentCount: integer("argument_count").default(0),
-		arguments: json("arguments").$type<
-			Array<{
-				name: string;
-				type: string;
-				defaultValue?: string;
-				description?: string;
-			}>
-		>(),
+		arguments:
+			json("arguments").$type<
+				Array<{
+					name: string;
+					type: string;
+					defaultValue?: string;
+					description?: string;
+				}>
+			>(),
 		description: text("description"),
 		deprecationReason: text("deprecation_reason"),
 		schemaVersionId: text("schema_version_id")
