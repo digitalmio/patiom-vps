@@ -50,13 +50,11 @@ type LogRequestOptions = {
 	fetch: typeof fetch;
 	payload: PatiomPayload;
 	token: string;
-	serviceName: string;
 };
 
 type PatiomLoggerOptions = {
 	fetch: typeof fetch;
 	token: string;
-	serviceName: string;
 	sendVariablesAsHash?: boolean;
 	schemaSyncing?: boolean;
 };
@@ -172,9 +170,8 @@ async function logRequest({
 	fetch: fetchFn,
 	payload,
 	token,
-	serviceName,
 }: LogRequestOptions): Promise<Response> {
-	return fetchFn(`https://${serviceName}.${hostname}/log`, {
+	return fetchFn(`https://${hostname}/api/ingest/log`, {
 		method: "POST",
 		body: JSON.stringify(payload),
 		headers: {
@@ -208,7 +205,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 
 			try {
 				await options.fetch(
-					`https://${options.serviceName}.${hostname}/schema`,
+					`https://${hostname}/api/ingest/schema`,
 					{
 						method: "POST",
 						body: JSON.stringify({ schema: introspection }),
@@ -294,7 +291,6 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 							fetch: options.fetch,
 							payload: patiomPayload,
 							token: options.token,
-							serviceName: options.serviceName,
 						});
 					} catch (_error) {
 						// Silently fail - logging shouldn't break the application
