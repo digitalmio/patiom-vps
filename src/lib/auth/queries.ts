@@ -1,4 +1,4 @@
-import { db, eq, schema } from ".";
+import { db, eq, schema } from "@/lib/db";
 
 export const validateToken = async (token: string, type: "schema" | "log") => {
 	const projectData = await db.query.projects.findFirst({

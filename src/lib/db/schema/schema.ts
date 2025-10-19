@@ -20,7 +20,7 @@ export const schemaVersions = pgTable("schema_versions", {
 	projectId: text("project_id")
 		.notNull()
 		.references(() => projects.id, { onDelete: "cascade" }),
-	schemaHash: varchar("schema_hash", { length: 64 }).notNull(),
+	schemaHash: integer("schema_hash").notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	isActive: boolean("is_active").default(true),
 

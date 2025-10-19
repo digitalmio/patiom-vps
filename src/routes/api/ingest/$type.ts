@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import { validateToken } from "@/lib/db/queries";
+import { validateToken } from "@/lib/auth/queries";
 import { logsQueue, schemaQueue } from "@/lib/redis";
 
 type IngestType = "log" | "schema";
