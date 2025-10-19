@@ -1,63 +1,10 @@
-import {
-	type GraphQLError,
-	type GraphQLSchema,
-	introspectionFromSchema,
-} from "graphql";
-
-// Type definitions
-type Headers = {
-	get(name: string): string | null;
-	has(name: string): boolean;
-};
-
-type PatiomPayloadOptions = {
-	headers: Headers;
-	operation: string;
-	method: string;
-	start: number;
-	operationName?: string | null;
-	errors?: readonly GraphQLError[] | null;
-	response: unknown;
-	variables?: Record<string, unknown> | null;
-	responseHeaders?: Headers;
-	sendVariablesAsHash: boolean;
-	hasSetCookie: boolean;
-	graphqlClientName: string;
-	graphqlClientVersion: string;
-};
-
-type PatiomPayload = {
-	graphqlClientName?: string;
-	graphqlClientVersion?: string;
-	operation: string;
-	operationName?: string | null;
-	variables?: Record<string, unknown> | null;
-	variableHash?: number;
-	method: string;
-	elapsed: number;
-	ip?: string;
-	hasSetCookie: boolean;
-	referer?: string;
-	userAgent?: string;
-	statusCode: number;
-	errors?: readonly GraphQLError[] | null;
-	responseSize: number;
-	responseHash: number;
-	varyHash?: number;
-};
-
-type LogRequestOptions = {
-	fetch: typeof fetch;
-	payload: PatiomPayload;
-	token: string;
-};
-
-type PatiomLoggerOptions = {
-	fetch: typeof fetch;
-	token: string;
-	sendVariablesAsHash?: boolean;
-	schemaSyncing?: boolean;
-};
+import { type GraphQLSchema, introspectionFromSchema } from "graphql";
+import type {
+	LogRequestOptions,
+	PatiomLoggerOptions,
+	PatiomPayload,
+	PatiomPayloadOptions,
+} from "./apollo.types";
 
 // Hash function for creating unique identifiers (djb2 algorithm)
 function createDjb2Hash(str: string): number {
@@ -204,17 +151,14 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 			if (stopped) return;
 
 			try {
-				await options.fetch(
-					`https://${hostname}/api/ingest/schema`,
-					{
-						method: "POST",
-						body: JSON.stringify({ schema: introspection }),
-						headers: {
-							"Content-Type": "application/json",
-							"Patiom-Schema-Token": options.token,
-						},
+				await options.fetch(`https://${hostname}/api/ingest/schema`, {
+					method: "POST",
+					body: JSON.stringify({ schema: introspection }),
+					headers: {
+						"Content-Type": "application/json",
+						"Patiom-Schema-Token": options.token,
 					},
-				);
+				});
 			} catch (_error) {
 				// Silently fail - schema sync shouldn't break the application
 			}
