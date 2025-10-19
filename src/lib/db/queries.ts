@@ -1,7 +1,7 @@
 import { db, eq, schema } from ".";
 
 export const validateToken = async (token: string, type: "schema" | "log") => {
-	const data = db.query.projects.findFirst({
+	const projectData = await db.query.projects.findFirst({
 		where:
 			type === "schema"
 				? eq(schema.projects.ingestionSchemaToken, token)
@@ -9,7 +9,7 @@ export const validateToken = async (token: string, type: "schema" | "log") => {
 	});
 
 	return {
-		data,
-		isValidToken: Boolean(data),
+		projectData,
+		isValidToken: Boolean(projectData),
 	};
 };

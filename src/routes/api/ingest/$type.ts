@@ -21,17 +21,22 @@ export const Route = createFileRoute("/api/ingest/$type")({
 				}
 
 				// ...and if it's valid
-				const { isValidToken } = await validateToken(
+				const { isValidToken, projectData } = await validateToken(
 					token,
 					params.type as IngestType,
 				);
-				if (!isValidToken) {
+				if (!isValidToken || !projectData) {
 					return json({ error: "Unauthorized" }, { status: 401 });
 				}
 
 				// all ok, now add data to the right queue
 				const queue = params.type === "schema" ? schemaQueue : logsQueue;
-				await queue.add(`${params.type}Queue`, await request.json());
+				const data = {
+					...(await request.json()),
+					projectId: projectData.id,
+					timestamp: new Date(),
+				};
+				await queue.add(`${params.type}Queue`, data);
 
 				// and respond with success
 				return json({
