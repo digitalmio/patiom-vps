@@ -18,8 +18,9 @@ import {
 	date,
 	index,
 	integer,
-	json,
+	jsonb,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	varchar,
@@ -32,11 +33,14 @@ import { projects } from "./app";
 export const requestLogs = pgTable(
 	"request_logs",
 	{
-		id: text("id").primaryKey(),
+		id: text("id").notNull(),
 		timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),
+
+		// Schema tracking - which schema version was active when this request happened
+		schemaVersionId: text("schema_version_id"),
 
 		// GraphQL Operation
 		operationName: varchar("operation_name", { length: 255 }),
@@ -66,7 +70,7 @@ export const requestLogs = pgTable(
 		// GraphQL Metrics
 		errorCount: integer("error_count").default(0),
 		errors:
-			json("errors").$type<
+			jsonb("errors").$type<
 				Array<{
 					message: string;
 					locations?: Array<{ line: number; column: number }>;
@@ -76,14 +80,15 @@ export const requestLogs = pgTable(
 
 		// Parsed field usage (populated by worker after parsing GraphQL query)
 		// e.g., ["Query.user", "User.id", "User.email", "User.posts", "Post.title"]
-		requestedFields: json("requested_fields").$type<string[]>(),
-
-		// Partitioning hint (generated column in Postgres)
+		requestedFields: jsonb("requested_fields").$type<string[]>(), // Partitioning hint (generated column in Postgres)
 		// Note: Generated columns are created via SQL, not through Drizzle directly
 		// See migration file or timescale-init.sql for implementation
 		datePartition: date("date_partition").notNull(),
 	},
 	(table) => [
+		// Composite primary key required for TimescaleDB hypertable
+		primaryKey({ columns: [table.id, table.timestamp] }),
+		// Indexes
 		index("idx_request_logs_project_timestamp").on(
 			table.projectId,
 			table.timestamp,

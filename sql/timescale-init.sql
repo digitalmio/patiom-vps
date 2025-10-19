@@ -1,5 +1,11 @@
--- GraphQL Analytics Logs Schema for TimescaleDB
--- TimescaleDB extension must be enabled first: CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- GraphQL Analytics - TimescaleDB Features
+-- 
+-- NOTE: The request_logs table is created by Drizzle migrations.
+-- This file only adds TimescaleDB-specific features that Drizzle can't handle.
+--
+-- Run this AFTER running `pnpm migrate:push`:
+--   docker cp ./sql/timescale-init.sql patiom-timescale:/tmp/
+--   docker compose exec timescale psql -U patiom -d patiom -f /tmp/timescale-init.sql
 --
 -- This schema uses TimescaleDB Continuous Aggregates instead of manual aggregation tables.
 -- Continuous Aggregates auto-update as new data arrives - no cron jobs needed!
@@ -9,70 +15,25 @@
 --   SELECT * FROM operation_stats_daily WHERE project_id = 'x' ORDER BY bucket DESC LIMIT 30;
 --   SELECT * FROM field_usage_stats_daily WHERE field_path = 'User.email' AND bucket >= NOW() - INTERVAL '7 days';
 
--- Raw request logs (detailed per-request data)
--- This will be converted to a hypertable for time-series optimization
-CREATE TABLE request_logs (
-    id TEXT PRIMARY KEY,
-    timestamp TIMESTAMPTZ NOT NULL,
-    project_id TEXT NOT NULL,
-    
-    -- GraphQL Operation
-    operation_name VARCHAR(255),
-    operation TEXT NOT NULL,
-    variable_hash BIGINT,
-    
-    -- Performance
-    elapsed_ms INTEGER NOT NULL,
-    response_size_bytes INTEGER,
-    response_hash BIGINT NOT NULL,
-    
-    -- Client Info
-    graphql_client_name VARCHAR(100),
-    graphql_client_version VARCHAR(50),
-    
-    -- Network
-    method VARCHAR(10) DEFAULT 'POST' NOT NULL,
-    status_code INTEGER DEFAULT 200 NOT NULL,
-    has_set_cookie BOOLEAN DEFAULT FALSE,
-    referer TEXT,
-    user_agent TEXT,
-    ip VARCHAR(45), -- IPv6 max length
-    
-    -- Cache variation tracking
-    vary_hash BIGINT,
-    
-    -- GraphQL Metrics
-    error_count INTEGER DEFAULT 0,
-    errors JSONB,
-    
-    -- Parsed field usage (populated by worker after parsing GraphQL query)
-    -- e.g., ["Query.user", "User.id", "User.email", "User.posts", "Post.title"]
-    requested_fields JSONB,
-    
-    -- Partitioning hint (computed column)
-    date_partition DATE GENERATED ALWAYS AS (DATE(timestamp)) STORED
-);
-
--- Convert to hypertable (time-series optimized table)
--- Partition by time with 7-day chunks
+-- Convert existing request_logs table to hypertable (time-series optimized table)
+-- Partition by time with 1-day chunks (better for daily queries and high volume)
 SELECT create_hypertable('request_logs', 'timestamp', 
-    chunk_time_interval => INTERVAL '7 days',
+    chunk_time_interval => INTERVAL '1 day',
     if_not_exists => TRUE
 );
 
--- Create indexes for common query patterns
-CREATE INDEX idx_request_logs_project_timestamp ON request_logs (project_id, timestamp DESC);
-CREATE INDEX idx_request_logs_project_operation ON request_logs (project_id, operation_name, timestamp DESC);
-CREATE INDEX idx_request_logs_project_status ON request_logs (project_id, status_code, timestamp DESC);
-CREATE INDEX idx_request_logs_date_partition ON request_logs (date_partition, project_id);
-CREATE INDEX idx_request_logs_operation_hash ON request_logs (project_id, response_hash);
--- GIN index for array field queries (e.g., find all requests using "User.email")
-CREATE INDEX idx_request_logs_requested_fields ON request_logs USING GIN (requested_fields);
+-- Note: Standard indexes are created by Drizzle migrations
+-- Only create TimescaleDB-specific indexes here
+
+-- GIN index for JSONB array field queries (e.g., find all requests using "User.email")
+CREATE INDEX IF NOT EXISTS idx_request_logs_requested_fields ON request_logs USING GIN (requested_fields);
 
 -- TimescaleDB Continuous Aggregates for real-time analytics
+-- Real-time mode: materialized_only=false means recent data is computed on-the-fly
 -- Hourly aggregation for operations
+DROP MATERIALIZED VIEW IF EXISTS operation_stats_hourly CASCADE;
 CREATE MATERIALIZED VIEW operation_stats_hourly
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only=false) AS
 SELECT 
     time_bucket('1 hour', timestamp) AS bucket,
     project_id,
@@ -91,16 +52,19 @@ GROUP BY bucket, project_id, operation_name
 WITH NO DATA;
 
 -- Add refresh policy to update the continuous aggregate
+-- Refreshes every 5 minutes for near-real-time analytics
+-- Window must cover at least 2 buckets (2 hours for hourly aggregates)
 SELECT add_continuous_aggregate_policy('operation_stats_hourly',
-    start_offset => INTERVAL '3 hours',
-    end_offset => INTERVAL '1 hour',
-    schedule_interval => INTERVAL '1 hour',
+    start_offset => INTERVAL '4 hours',
+    end_offset => INTERVAL '5 minutes',
+    schedule_interval => INTERVAL '5 minutes',
     if_not_exists => TRUE
 );
 
 -- Daily aggregation for operations
+DROP MATERIALIZED VIEW IF EXISTS operation_stats_daily CASCADE;
 CREATE MATERIALIZED VIEW operation_stats_daily
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only=false) AS
 SELECT 
     time_bucket('1 day', timestamp) AS bucket,
     project_id,
@@ -119,35 +83,45 @@ GROUP BY bucket, project_id, operation_name
 WITH NO DATA;
 
 -- Add refresh policy for daily stats
+-- Refreshes every hour to include "today so far" data
+-- Window must cover at least 2 buckets (3 days for daily aggregates)
 SELECT add_continuous_aggregate_policy('operation_stats_daily',
     start_offset => INTERVAL '3 days',
-    end_offset => INTERVAL '1 day',
-    schedule_interval => INTERVAL '1 day',
+    end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 hour',
     if_not_exists => TRUE
 );
 
 -- Daily field usage aggregation
 -- This unnests the requested_fields array and aggregates by field path
+DROP MATERIALIZED VIEW IF EXISTS field_usage_stats_daily CASCADE;
 CREATE MATERIALIZED VIEW field_usage_stats_daily
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only=false) AS
 SELECT 
     time_bucket('1 day', timestamp) AS bucket,
     project_id,
     field_path,
-    COUNT(*) as total_requests,
-    SUM(elapsed_ms) as total_latency_ms,
-    SUM(error_count) as error_count
-FROM request_logs, 
+    COUNT(*) as usage_count
+FROM request_logs,
      jsonb_array_elements_text(requested_fields) AS field_path
 GROUP BY bucket, project_id, field_path
 WITH NO DATA;
 
 -- Add refresh policy for field usage stats
+-- Refreshes every hour for up-to-date field usage tracking
+-- Window must cover at least 2 buckets (3 days for daily aggregates)
 SELECT add_continuous_aggregate_policy('field_usage_stats_daily',
     start_offset => INTERVAL '3 days',
-    end_offset => INTERVAL '1 day',
-    schedule_interval => INTERVAL '1 day',
+    end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 hour',
     if_not_exists => TRUE
+);
+
+-- Enable compression on the hypertable
+ALTER TABLE request_logs SET (
+    timescaledb.compress,
+    timescaledb.compress_segmentby = 'project_id',
+    timescaledb.compress_orderby = 'timestamp DESC'
 );
 
 -- Compression policy - compress data older than 7 days
@@ -164,6 +138,7 @@ SELECT add_compression_policy('request_logs',
 -- );
 
 -- Helper view for recent operations (last 24 hours)
+DROP VIEW IF EXISTS recent_operations CASCADE;
 CREATE VIEW recent_operations AS
 SELECT 
     project_id,
@@ -178,6 +153,8 @@ GROUP BY project_id, operation_name
 ORDER BY total_requests DESC;
 
 -- Helper view for error tracking
+-- Helper view for error tracking
+DROP VIEW IF EXISTS error_logs CASCADE;
 CREATE VIEW error_logs AS
 SELECT 
     id,
@@ -195,7 +172,3 @@ ORDER BY timestamp DESC;
 
 -- Comment on tables for documentation
 COMMENT ON TABLE request_logs IS 'TimescaleDB hypertable storing all GraphQL request logs with automatic partitioning by time';
-COMMENT ON TABLE operation_stats IS 'Pre-aggregated daily statistics for GraphQL operations';
-COMMENT ON TABLE field_usage_stats IS 'Daily aggregated statistics for GraphQL field usage';
-COMMENT ON MATERIALIZED VIEW operation_stats_hourly IS 'TimescaleDB continuous aggregate with hourly operation statistics';
-COMMENT ON MATERIALIZED VIEW operation_stats_daily IS 'TimescaleDB continuous aggregate with daily operation statistics';

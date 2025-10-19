@@ -1,4 +1,4 @@
-import { and, db, eq, schema } from "..";
+import { and, db, desc, eq, schema } from "..";
 
 export async function findExistingSchema(
 	projectId: string,
@@ -12,4 +12,16 @@ export async function findExistingSchema(
 	});
 
 	return existing ?? null;
+}
+
+export async function getActiveSchemaVersion(projectId: string) {
+	const active = await db.query.schemaVersions.findFirst({
+		where: and(
+			eq(schema.schemaVersions.projectId, projectId),
+			eq(schema.schemaVersions.isActive, true),
+		),
+		orderBy: desc(schema.schemaVersions.createdAt),
+	});
+
+	return active ?? null;
 }
