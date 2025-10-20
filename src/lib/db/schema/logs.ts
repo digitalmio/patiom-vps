@@ -93,8 +93,11 @@ export const requestLogs = pgTable(
 			>(),
 
 		// Parsed field usage (populated by worker after parsing GraphQL query)
-		// e.g., ["Query.user", "User.id", "User.email", "User.posts", "Post.title"]
-		requestedFields: jsonb("requested_fields").$type<string[]>(), // Partitioning hint (generated column in Postgres)
+		// Array of schema_fields.id references for fields used in this request
+		// Allows direct joins to schema_fields for analytics
+		requestedFieldIds: jsonb("requested_field_ids").$type<string[]>(),
+
+		// Partitioning hint (generated column in Postgres)
 		// Note: Generated columns are created via SQL, not through Drizzle directly
 		// See migration file or timescale-init.sql for implementation
 		datePartition: date("date_partition").notNull(),
@@ -136,8 +139,8 @@ export const requestLogs = pgTable(
 			table.browserName,
 			table.timestamp,
 		),
-		// Note: GIN index for requested_fields array needs to be created via SQL
-		// CREATE INDEX idx_request_logs_requested_fields ON request_logs USING GIN (requested_fields);
+		// Note: GIN index for requested_field_ids array needs to be created via SQL
+		// CREATE INDEX idx_request_logs_requested_field_ids ON request_logs USING GIN (requested_field_ids);
 	],
 );
 

@@ -5,6 +5,7 @@ import IORedis from "ioredis";
 import { nanoid } from "nanoid";
 import { env } from "@/env";
 import { db } from "@/lib/db";
+import { resolveFieldIds } from "@/lib/db/queries/fields";
 import { getActiveSchemaVersion } from "@/lib/db/queries/schema";
 import { requestLogs } from "@/lib/db/schema";
 import { parseIpGeolocation } from "@/lib/geo";
@@ -38,7 +39,13 @@ export const logsWorker = new Worker<LogJobData>(
 			data.operationName,
 			introspection,
 		);
-		// Step 5: Insert log record
+
+		// Step 5: Resolve field paths to field IDs
+		const requestedFieldIds = activeSchema
+			? await resolveFieldIds(activeSchema.id, requestedFields)
+			: [];
+
+		// Step 6: Insert log record
 		const timestamp = new Date(data.timestamp);
 		const datePartition = timestamp.toISOString().split("T")[0]; // Extract date only (YYYY-MM-DD)
 
@@ -89,14 +96,15 @@ export const logsWorker = new Worker<LogJobData>(
 			errorCount: data.errors?.length || 0,
 			errors: data.errors || null,
 
-			// Parsed fields (empty for now, will populate in next step)
-			requestedFields: requestedFields.length > 0 ? requestedFields : null,
+			// Resolved field IDs (references to schema_fields table)
+			requestedFieldIds:
+				requestedFieldIds.length > 0 ? requestedFieldIds : null,
 
 			// Date partition for TimescaleDB (date only, no time)
 			datePartition,
 		});
 
-		return { logId: nanoid(), fieldsCount: requestedFields.length };
+		return { logId: nanoid(), fieldsCount: requestedFieldIds.length };
 	},
 	{
 		connection: redis,

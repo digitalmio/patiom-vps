@@ -25,8 +25,8 @@ SELECT create_hypertable('request_logs', 'timestamp',
 -- Note: Standard indexes are created by Drizzle migrations
 -- Only create TimescaleDB-specific indexes here
 
--- GIN index for JSONB array field queries (e.g., find all requests using "User.email")
-CREATE INDEX IF NOT EXISTS idx_request_logs_requested_fields ON request_logs USING GIN (requested_fields);
+-- GIN index for JSONB array field queries (e.g., find all requests using a specific field ID)
+CREATE INDEX IF NOT EXISTS idx_request_logs_requested_field_ids ON request_logs USING GIN (requested_field_ids);
 
 -- TimescaleDB Continuous Aggregates for real-time analytics
 -- Real-time mode: materialized_only=false means recent data is computed on-the-fly
@@ -93,18 +93,18 @@ SELECT add_continuous_aggregate_policy('operation_stats_daily',
 );
 
 -- Daily field usage aggregation
--- This unnests the requested_fields array and aggregates by field path
+-- This unnests the requested_field_ids array and aggregates by field ID
 DROP MATERIALIZED VIEW IF EXISTS field_usage_stats_daily CASCADE;
 CREATE MATERIALIZED VIEW field_usage_stats_daily
 WITH (timescaledb.continuous, timescaledb.materialized_only=false) AS
 SELECT 
     time_bucket('1 day', timestamp) AS bucket,
     project_id,
-    field_path,
+    field_id,
     COUNT(*) as usage_count
 FROM request_logs,
-     jsonb_array_elements_text(requested_fields) AS field_path
-GROUP BY bucket, project_id, field_path
+     jsonb_array_elements_text(requested_field_ids) AS field_id
+GROUP BY bucket, project_id, field_id
 WITH NO DATA;
 
 -- Add refresh policy for field usage stats
