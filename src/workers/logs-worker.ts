@@ -1,11 +1,15 @@
 import { Worker } from "bullmq";
 import closeWithGrace from "close-with-grace";
+import type { IntrospectionQuery } from "graphql";
 import IORedis from "ioredis";
 import { nanoid } from "nanoid";
 import { env } from "@/env";
 import { db } from "@/lib/db";
 import { getActiveSchemaVersion } from "@/lib/db/queries/schema";
 import { requestLogs } from "@/lib/db/schema";
+import { parseIpGeolocation } from "@/lib/geo";
+import { extractFieldPaths } from "@/lib/graphql-parser";
+import { parseUserAgent } from "@/lib/user-agent";
 import type { LogJobData } from "./logs-worker.types";
 
 const redis = new IORedis(env.REDIS_URL);
@@ -18,11 +22,23 @@ export const logsWorker = new Worker<LogJobData>(
 		// Step 1: Get active schema version for this project
 		const activeSchema = await getActiveSchemaVersion(data.projectId);
 
-		// Step 2: Parse GraphQL query to extract field paths
-		// TODO: Implement GraphQL query parser
-		const requestedFields: string[] = [];
+		// Step 2: Parse user-agent
+		const userAgentInfo = parseUserAgent(data.userAgent);
 
-		// Step 3: Insert log record
+		// Step 3: Parse IP geolocation
+		const geoInfo = await parseIpGeolocation(data.ip);
+
+		// Step 4: Parse GraphQL query to extract field paths (with schema introspection if available)
+		const introspection = activeSchema?.introspectionData
+			? (activeSchema.introspectionData as IntrospectionQuery)
+			: null;
+
+		const requestedFields = extractFieldPaths(
+			data.operation,
+			data.operationName,
+			introspection,
+		);
+		// Step 5: Insert log record
 		const timestamp = new Date(data.timestamp);
 		const datePartition = timestamp.toISOString().split("T")[0]; // Extract date only (YYYY-MM-DD)
 
@@ -54,10 +70,22 @@ export const logsWorker = new Worker<LogJobData>(
 			userAgent: data.userAgent || null,
 			ip: data.ip || null,
 
-			// Cache
-			varyHash: data.varyHash || null,
+			// Parsed User Agent
+			browserName: userAgentInfo.browserName,
+			browserVersion: userAgentInfo.browserVersion,
+			osName: userAgentInfo.osName,
+			osVersion: userAgentInfo.osVersion,
+			platformType: userAgentInfo.platformType,
 
-			// Errors
+			// Parsed Geolocation
+			countryCode: geoInfo.countryCode,
+			countryName: geoInfo.countryName,
+			city: geoInfo.city,
+			latitude: geoInfo.latitude,
+			longitude: geoInfo.longitude,
+
+			// Cache
+			varyHash: data.varyHash || null, // Errors
 			errorCount: data.errors?.length || 0,
 			errors: data.errors || null,
 

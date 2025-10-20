@@ -64,6 +64,20 @@ export const requestLogs = pgTable(
 		userAgent: text("user_agent"),
 		ip: varchar("ip", { length: 45 }), // IPv6 max length
 
+		// Parsed User Agent (from bowser)
+		browserName: varchar("browser_name", { length: 50 }),
+		browserVersion: varchar("browser_version", { length: 20 }),
+		osName: varchar("os_name", { length: 50 }),
+		osVersion: varchar("os_version", { length: 20 }),
+		platformType: varchar("platform_type", { length: 20 }), // desktop, mobile, tablet, tv
+
+		// Parsed Geolocation (from MaxMind)
+		countryCode: varchar("country_code", { length: 2 }), // ISO 3166-1 alpha-2
+		countryName: varchar("country_name", { length: 100 }),
+		city: varchar("city", { length: 100 }),
+		latitude: text("latitude"), // Stored as text to avoid precision issues
+		longitude: text("longitude"),
+
 		// Cache variation tracking
 		varyHash: bigint("vary_hash", { mode: "number" }),
 
@@ -110,6 +124,17 @@ export const requestLogs = pgTable(
 		index("idx_request_logs_operation_hash").on(
 			table.projectId,
 			table.responseHash,
+		),
+		// Analytics indexes
+		index("idx_request_logs_country").on(
+			table.projectId,
+			table.countryCode,
+			table.timestamp,
+		),
+		index("idx_request_logs_browser").on(
+			table.projectId,
+			table.browserName,
+			table.timestamp,
 		),
 		// Note: GIN index for requested_fields array needs to be created via SQL
 		// CREATE INDEX idx_request_logs_requested_fields ON request_logs USING GIN (requested_fields);
