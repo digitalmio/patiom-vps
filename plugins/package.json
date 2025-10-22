@@ -2,9 +2,12 @@
 	"name": "patiom",
 	"version": "1.0.0",
 	"description": "",
+	"module": "dist/index.mjs",
 	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "tsup ./src/apollo.ts ./src/index.ts --format cjs,esm --dts --out-dir ./dist --clean"
 	},
 	"peerDependencies": {
 		"graphql": "*"
@@ -15,8 +18,25 @@
 		"tsup": "^8.5.0",
 		"typescript": "^5.9.3"
 	},
-	"keywords": [],
-	"author": "",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./apollo-server": {
+			"types": "./dist/apollo.d.ts",
+			"import": "./dist/apollo.mjs",
+			"require": "./dist/apollo.js"
+		}
+	},
+	"keywords": [
+		"patiom",
+		"apollo",
+		"graphql",
+		"plugin"
+	],
+	"author": "Digital MIO Ltd",
 	"license": "ISC",
 	"packageManager": "pnpm@10.17.1"
 }
