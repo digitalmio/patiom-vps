@@ -90,8 +90,8 @@ function warnFetch(fetchFn: unknown): void {
 const getHostname = (): string => {
 	const endpoint = process.env.PATIOM_ENDPOINT;
 	return endpoint === "local" || endpoint === "staging"
-		? "patiom.local"
-		: "patiom.dev";
+		? "http://127.0.0.1:3000"
+		: "https://patiom.dev";
 };
 
 const hostname = getHostname();
@@ -101,7 +101,7 @@ async function logRequest({
 	payload,
 	token,
 }: LogRequestOptions): Promise<Response> {
-	return fetchFn(`https://${hostname}/api/ingest/log`, {
+	return fetchFn(`${hostname}/api/ingest/log`, {
 		method: "POST",
 		body: JSON.stringify(payload),
 		headers: {
@@ -134,7 +134,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 			if (stopped) return;
 
 			try {
-				await options.fetch(`https://${hostname}/api/ingest/schema`, {
+				options.fetch(`${hostname}/api/ingest/schema`, {
 					method: "POST",
 					body: JSON.stringify({ schema: introspection }),
 					headers: {

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/ingest/$type")({
 		handlers: {
 			POST: async ({ request, params }) => {
 				// allow only "log" or "schema" types
-				if (params.type !== "logs" && params.type !== "schema") {
+				if (params.type !== "log" && params.type !== "schema") {
 					throw json({ error: "Invalid type" }, { status: 400 });
 				}
 
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/ingest/$type")({
 				const queue = params.type === "schema" ? schemaQueue : logsQueue;
 				const data = {
 					...(await request.json()),
-					projectId: projectData.id,
+					projectId: 123, //projectData.id,
 					timestamp: new Date(),
 				};
 				await queue.add(`${params.type}Queue`, data);
