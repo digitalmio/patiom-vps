@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/ingest/$type")({
 				const queue = params.type === "schema" ? schemaQueue : logsQueue;
 				const data = {
 					...(await request.json()),
-					projectId: 123, //projectData.id,
+					projectId: projectData.id,
 					timestamp: new Date(),
 				};
 				await queue.add(`${params.type}Queue`, data);
