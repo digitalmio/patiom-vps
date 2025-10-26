@@ -13,7 +13,9 @@ import { extractFieldPaths } from "@/lib/graphql-parser";
 import { parseUserAgent } from "@/lib/user-agent";
 import type { LogJobData } from "./logs-worker.types";
 
-const redis = new IORedis(env.REDIS_URL);
+const redis = new IORedis(env.REDIS_URL, {
+	maxRetriesPerRequest: null,
+});
 
 export const logsWorker = new Worker<LogJobData>(
 	"logsQueue",

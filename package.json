@@ -13,7 +13,9 @@
     "migrate:dev": "drizzle-kit migrate dev",
     "migrate:push": "drizzle-kit push",
     "start": "node --env-file .env .output/server/index.mjs",
-    "worker:schema": "tsx src/workers/schema-worker.ts"
+    "worker:schema": "tsx --env-file .env src/workers/schema-worker.ts",
+    "worker:logs": "tsx --env-file .env src/workers/logs-worker.ts",
+    "workers": "concurrently \"pnpm run worker:schema\" \"pnpm run worker:logs\""
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
@@ -65,6 +67,7 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.5",
     "jsdom": "^27.0.0",
     "tsx": "^4.20.6",

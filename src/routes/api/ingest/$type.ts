@@ -21,10 +21,7 @@ export const Route = createFileRoute("/api/ingest/$type")({
 				}
 
 				// ...and if it's valid
-				const { isValidToken, projectData } = await validateToken(
-					token,
-					params.type as IngestType,
-				);
+				const { isValidToken, projectData } = await validateToken(token);
 				if (!isValidToken || !projectData) {
 					return json({ error: "Unauthorized" }, { status: 401 });
 				}
