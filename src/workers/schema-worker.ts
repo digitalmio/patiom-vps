@@ -10,14 +10,43 @@ const redis = new IORedis(env.REDIS_URL, {
 });
 
 type SchemaJobData = {
-	introspection: IntrospectionQuery;
+	schema: IntrospectionQuery;
 	projectId: string;
+	timestamp: Date;
 };
 
 export const schemaWorker = new Worker<SchemaJobData>(
 	"schemaQueue",
 	async (job) => {
-		const { introspection, projectId } = job.data;
+		console.log(
+			`[Schema Worker] Processing job ${job.id} for project ${job.data.projectId}`,
+		);
+
+		const { schema: introspection, projectId } = job.data;
+
+		// Validate job data
+		if (!introspection) {
+			console.error(`[Schema Worker] Job ${job.id}: schema is undefined`);
+			throw new Error("Schema data is missing");
+		}
+
+		if (!introspection.__schema) {
+			console.error(
+				`[Schema Worker] Job ${job.id}: schema.__schema is undefined`,
+			);
+			throw new Error("Introspection schema is missing");
+		}
+
+		if (!introspection.__schema.types) {
+			console.error(
+				`[Schema Worker] Job ${job.id}: schema.__schema.types is undefined`,
+			);
+			throw new Error("Introspection types array is missing");
+		}
+
+		console.log(
+			`[Schema Worker] Job ${job.id}: Received ${introspection.__schema.types.length} types`,
+		);
 
 		const result = await processSchemaIntrospection(introspection, projectId);
 
@@ -25,6 +54,10 @@ export const schemaWorker = new Worker<SchemaJobData>(
 		if (result.isNewVersion) {
 			console.log(
 				`[Schema] New version for project ${projectId}: ${result.typeCount} types, ${result.fieldCount} fields`,
+			);
+		} else {
+			console.log(
+				`[Schema] Job ${job.id}: Schema unchanged for project ${projectId}`,
 			);
 		}
 
@@ -40,6 +73,16 @@ export const schemaWorker = new Worker<SchemaJobData>(
 // Only log failures
 schemaWorker.on("failed", (job, err) => {
 	console.error(`[Schema Worker] Job ${job?.id} failed:`, err.message);
+	console.error(`[Schema Worker] Job ${job?.id} stack trace:`, err.stack);
+	if (job?.data) {
+		console.error(`[Schema Worker] Job ${job.id} data:`, {
+			projectId: job.data.projectId,
+			hasSchema: !!job.data.schema,
+			hasSchemaData: !!job.data.schema?.__schema,
+			hasTypes: !!job.data.schema?.__schema?.types,
+			typesLength: job.data.schema?.__schema?.types?.length,
+		});
+	}
 });
 
 // Graceful shutdown with close-with-grace

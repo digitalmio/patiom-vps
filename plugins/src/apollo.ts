@@ -106,7 +106,7 @@ async function logRequest({
 		body: JSON.stringify(payload),
 		headers: {
 			"Content-Type": "application/json",
-			"Patiom-Logging-Token": token,
+			"Patiom-Token": token,
 		},
 	});
 }
@@ -139,7 +139,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 					body: JSON.stringify({ schema: introspection }),
 					headers: {
 						"Content-Type": "application/json",
-						"Patiom-Schema-Token": options.token,
+						"Patiom-Token": options.token,
 					},
 				});
 			} catch (_error) {

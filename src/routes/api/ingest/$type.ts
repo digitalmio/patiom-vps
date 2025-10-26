@@ -3,8 +3,6 @@ import { json } from "@tanstack/react-start";
 import { validateToken } from "@/lib/auth/queries";
 import { logsQueue, schemaQueue } from "@/lib/redis";
 
-type IngestType = "log" | "schema";
-
 export const Route = createFileRoute("/api/ingest/$type")({
 	server: {
 		handlers: {
@@ -15,7 +13,7 @@ export const Route = createFileRoute("/api/ingest/$type")({
 				}
 
 				// check if token is provided...
-				const token = request.headers.get("Patiom-Schema-Token");
+				const token = request.headers.get("Patiom-Token");
 				if (!token) {
 					return json({ error: "Unauthorized" }, { status: 401 });
 				}
