@@ -3,7 +3,6 @@ import type {
 	IntrospectionOutputTypeRef,
 	IntrospectionQuery,
 } from "graphql";
-import { nanoid } from "nanoid";
 import pino from "pino";
 import { db, schema as dbSchema, eq } from "@/lib/db";
 import { findExistingSchema } from "@/lib/db/queries/schema";
@@ -242,10 +241,6 @@ export async function processSchemaIntrospection(
 
 	logger.info("No existing schema found, creating new version");
 
-	// Generate new schema version ID first
-	const schemaVersionId = nanoid();
-	logger.debug({ schemaVersionId }, "Generated new schema version ID");
-
 	// Count operations
 	const schema = introspection.__schema;
 	let operationCount = 0;
@@ -257,20 +252,17 @@ export async function processSchemaIntrospection(
 
 	// Create schema version record FIRST (so foreign keys work)
 	logger.debug("Creating schema version record");
-	try {
-		await db.insert(dbSchema.schemaVersions).values({
-			id: schemaVersionId,
+	const [{ id: schemaVersionId }] = await db
+		.insert(dbSchema.schemaVersions)
+		.values({
 			projectId,
 			schemaHash,
 			typeCount: 0, // Will update later
 			fieldCount: 0, // Will update later
 			operationCount,
 			introspectionData: introspection,
-		});
-	} catch (error) {
-		logger.error({ error }, "Error creating schema version");
-		throw error;
-	}
+		})
+		.returning({ id: dbSchema.schemaVersions.id });
 
 	// Extract and insert types
 	const typeCount = await extractAndInsertTypes(

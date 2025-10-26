@@ -9,7 +9,7 @@ import {
 	timestamp,
 	varchar,
 } from "drizzle-orm/pg-core";
-
+import { nanoid } from "nanoid";
 import { projects } from "./app";
 
 // THIS IS FOR GRAPHQL SCHEMA TABLES, NOT WHOLE DB SCHEMA
@@ -18,7 +18,7 @@ import { projects } from "./app";
 export const schemaVersions = pgTable(
 	"schema_versions",
 	{
-		id: text("id").primaryKey(), // nanoid or similar
+		id: text("id").default(nanoid()).primaryKey(), // nanoid or similar
 		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),

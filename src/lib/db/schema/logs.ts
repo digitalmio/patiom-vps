@@ -1,9 +1,9 @@
 // GraphQL Analytics Logs Schema
-// Note: These tables will be converted to TimescaleDB hypertables via migrations
+// Note: These tables will be converted to TimescaleDB hyper-tables via migrations
 // See sql/timescale-init.sql for TimescaleDB-specific features
 //
 // Architecture:
-// 1. Raw logs stored in `request_logs` (TimescaleDB hypertable)
+// 1. Raw logs stored in `request_logs` (TimescaleDB hyper-table)
 // 2. Aggregations handled by TimescaleDB Continuous Aggregates (auto-updating materialized views)
 // 3. No manual cron jobs needed - TimescaleDB refreshes views automatically
 //
@@ -25,7 +25,7 @@ import {
 	timestamp,
 	varchar,
 } from "drizzle-orm/pg-core";
-
+import { nanoid } from "nanoid";
 import { projects } from "./app";
 
 // Raw request logs (detailed per-request data)
@@ -33,7 +33,7 @@ import { projects } from "./app";
 export const requestLogs = pgTable(
 	"request_logs",
 	{
-		id: text("id").notNull(),
+		id: text("id").default(nanoid()).notNull(),
 		timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 		projectId: text("project_id")
 			.notNull()

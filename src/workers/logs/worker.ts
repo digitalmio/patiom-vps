@@ -2,13 +2,11 @@ import { Worker } from "bullmq";
 import closeWithGrace from "close-with-grace";
 import type { IntrospectionQuery } from "graphql";
 import IORedis from "ioredis";
-import { nanoid } from "nanoid";
 import pino from "pino";
 import { env } from "@/env";
-import { db } from "@/lib/db";
+import { db, schema } from "@/lib/db";
 import { resolveFieldIds } from "@/lib/db/queries/fields";
 import { getActiveSchemaVersion } from "@/lib/db/queries/schema";
-import { requestLogs } from "@/lib/db/schema";
 import { parseIpGeolocation } from "@/lib/geo";
 import { extractFieldPaths } from "@/lib/graphql-parser";
 import { parseUserAgent } from "@/lib/user-agent";
@@ -78,8 +76,7 @@ export const logsWorker = new Worker<LogJobData>(
 
 		logger.debug({ jobId: job.id }, "Inserting log record");
 		try {
-			await db.insert(requestLogs).values({
-				id: nanoid(),
+			await db.insert(schema.requestLogs).values({
 				timestamp,
 				projectId: data.projectId,
 				schemaVersionId: activeSchema?.id || null,
@@ -138,7 +135,6 @@ export const logsWorker = new Worker<LogJobData>(
 			logger.error({ jobId: job.id, error }, "Error inserting log record");
 			throw error;
 		}
-		return { logId: nanoid(), fieldsCount: requestedFieldIds.length };
 	},
 	{
 		connection: redis,
