@@ -13,8 +13,8 @@
     "migrate:dev": "drizzle-kit migrate dev",
     "migrate:push": "drizzle-kit push",
     "start": "node --env-file .env .output/server/index.mjs",
-    "worker:schema": "tsx --env-file .env src/workers/schema-worker.ts",
-    "worker:logs": "tsx --env-file .env src/workers/logs-worker.ts",
+    "worker:schema": "tsx --env-file .env src/workers/schema/worker.ts",
+    "worker:logs": "tsx --env-file .env src/workers/logs/worker.ts",
     "workers": "concurrently \"pnpm run worker:schema\" \"pnpm run worker:logs\""
   },
   "dependencies": {
