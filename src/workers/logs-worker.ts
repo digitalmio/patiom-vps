@@ -3,6 +3,7 @@ import closeWithGrace from "close-with-grace";
 import type { IntrospectionQuery } from "graphql";
 import IORedis from "ioredis";
 import { nanoid } from "nanoid";
+import pino from "pino";
 import { env } from "@/env";
 import { db } from "@/lib/db";
 import { resolveFieldIds } from "@/lib/db/queries/fields";
@@ -13,6 +14,11 @@ import { extractFieldPaths } from "@/lib/graphql-parser";
 import { parseUserAgent } from "@/lib/user-agent";
 import type { LogJobData } from "./logs-worker.types";
 
+const logger = pino({
+	name: "logs-worker",
+	level: "debug",
+});
+
 const redis = new IORedis(env.REDIS_URL, {
 	maxRetriesPerRequest: null,
 });
@@ -20,10 +26,20 @@ const redis = new IORedis(env.REDIS_URL, {
 export const logsWorker = new Worker<LogJobData>(
 	"logsQueue",
 	async (job) => {
+		logger.info(
+			{ jobId: job.id, projectId: job.data.projectId },
+			"Processing job",
+		);
+
 		const data = job.data;
 
 		// Step 1: Get active schema version for this project
+		logger.debug({ jobId: job.id }, "Fetching active schema version");
 		const activeSchema = await getActiveSchemaVersion(data.projectId);
+		logger.debug(
+			{ jobId: job.id, schemaVersionId: activeSchema?.id || "none" },
+			"Active schema version",
+		);
 
 		// Step 2: Parse user-agent
 		const userAgentInfo = parseUserAgent(data.userAgent);
@@ -36,76 +52,92 @@ export const logsWorker = new Worker<LogJobData>(
 			? (activeSchema.introspectionData as IntrospectionQuery)
 			: null;
 
+		logger.debug({ jobId: job.id }, "Extracting field paths from operation");
 		const requestedFields = extractFieldPaths(
 			data.operation,
 			data.operationName,
 			introspection,
+		);
+		logger.debug(
+			{ jobId: job.id, fieldPathCount: requestedFields.length },
+			"Found field paths",
 		);
 
 		// Step 5: Resolve field paths to field IDs
 		const requestedFieldIds = activeSchema
 			? await resolveFieldIds(activeSchema.id, requestedFields)
 			: [];
+		logger.debug(
+			{ jobId: job.id, fieldIdCount: requestedFieldIds.length },
+			"Resolved field IDs",
+		);
 
 		// Step 6: Insert log record
 		const timestamp = new Date(data.timestamp);
 		const datePartition = timestamp.toISOString().split("T")[0]; // Extract date only (YYYY-MM-DD)
 
-		await db.insert(requestLogs).values({
-			id: nanoid(),
-			timestamp,
-			projectId: data.projectId,
-			schemaVersionId: activeSchema?.id || null,
+		logger.debug({ jobId: job.id }, "Inserting log record");
+		try {
+			await db.insert(requestLogs).values({
+				id: nanoid(),
+				timestamp,
+				projectId: data.projectId,
+				schemaVersionId: activeSchema?.id || null,
 
-			// GraphQL Operation
-			operationName: data.operationName || null,
-			operation: data.operation,
-			variableHash: data.variableHash || null,
+				// GraphQL Operation
+				operationName: data.operationName || null,
+				operation: data.operation,
+				variableHash: data.variableHash || null,
 
-			// Performance
-			elapsedMs: data.elapsed,
-			responseSizeBytes: data.responseSize,
-			responseHash: data.responseHash,
+				// Performance
+				elapsedMs: data.elapsed,
+				responseSizeBytes: data.responseSize,
+				responseHash: data.responseHash,
 
-			// Client Info
-			graphqlClientName: data.graphqlClientName || null,
-			graphqlClientVersion: data.graphqlClientVersion || null,
+				// Client Info
+				graphqlClientName: data.graphqlClientName || null,
+				graphqlClientVersion: data.graphqlClientVersion || null,
 
-			// Network
-			method: data.method,
-			statusCode: data.statusCode,
-			hasSetCookie: data.hasSetCookie,
-			referer: data.referer || null,
-			userAgent: data.userAgent || null,
-			ip: data.ip || null,
+				// Network
+				method: data.method,
+				statusCode: data.statusCode,
+				hasSetCookie: data.hasSetCookie,
+				referer: data.referer || null,
+				userAgent: data.userAgent || null,
+				ip: data.ip || null,
 
-			// Parsed User Agent
-			browserName: userAgentInfo.browserName,
-			browserVersion: userAgentInfo.browserVersion,
-			osName: userAgentInfo.osName,
-			osVersion: userAgentInfo.osVersion,
-			platformType: userAgentInfo.platformType,
+				// Parsed User Agent
+				browserName: userAgentInfo.browserName,
+				browserVersion: userAgentInfo.browserVersion,
+				osName: userAgentInfo.osName,
+				osVersion: userAgentInfo.osVersion,
+				platformType: userAgentInfo.platformType,
 
-			// Parsed Geolocation
-			countryCode: geoInfo.countryCode,
-			countryName: geoInfo.countryName,
-			city: geoInfo.city,
-			latitude: geoInfo.latitude,
-			longitude: geoInfo.longitude,
+				// Parsed Geolocation
+				countryCode: geoInfo.countryCode,
+				countryName: geoInfo.countryName,
+				city: geoInfo.city,
+				latitude: geoInfo.latitude,
+				longitude: geoInfo.longitude,
 
-			// Cache
-			varyHash: data.varyHash || null, // Errors
-			errorCount: data.errors?.length || 0,
-			errors: data.errors || null,
+				// Cache
+				varyHash: data.varyHash || null, // Errors
+				errorCount: data.errors?.length || 0,
+				errors: data.errors || null,
 
-			// Resolved field IDs (references to schema_fields table)
-			requestedFieldIds:
-				requestedFieldIds.length > 0 ? requestedFieldIds : null,
+				// Resolved field IDs (references to schema_fields table)
+				requestedFieldIds:
+					requestedFieldIds.length > 0 ? requestedFieldIds : null,
 
-			// Date partition for TimescaleDB (date only, no time)
-			datePartition,
-		});
+				// Date partition for TimescaleDB (date only, no time)
+				datePartition,
+			});
 
+			logger.debug({ jobId: job.id }, "Successfully inserted log record");
+		} catch (error) {
+			logger.error({ jobId: job.id, error }, "Error inserting log record");
+			throw error;
+		}
 		return { logId: nanoid(), fieldsCount: requestedFieldIds.length };
 	},
 	{
@@ -117,18 +149,33 @@ export const logsWorker = new Worker<LogJobData>(
 
 // Only log failures
 logsWorker.on("failed", (job, err) => {
-	console.error(`[Logs Worker] Job ${job?.id} failed:`, err.message);
+	logger.error(
+		{
+			jobId: job?.id,
+			error: err.message,
+			stack: err.stack,
+			data: job?.data
+				? {
+						projectId: job.data.projectId,
+						operationName: job.data.operationName,
+						hasOperation: !!job.data.operation,
+						operationLength: job.data.operation?.length,
+					}
+				: undefined,
+		},
+		"Job failed",
+	);
 });
 
 // Graceful shutdown
 closeWithGrace({ delay: 5000 }, async ({ signal, err }) => {
 	if (err) {
-		console.error("[Logs Worker] Shutdown due to error:", err);
+		logger.error({ error: err }, "Shutdown due to error");
 	}
-	console.log(`[Logs Worker] Received ${signal}, shutting down gracefully...`);
+	logger.info({ signal }, "Shutting down gracefully");
 
 	await logsWorker.close();
 	await redis.quit();
 });
 
-console.log("[Logs Worker] Started and waiting for jobs...");
+logger.info("Started and waiting for jobs");

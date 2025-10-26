@@ -4,9 +4,15 @@ import type {
 	IntrospectionQuery,
 } from "graphql";
 import { nanoid } from "nanoid";
+import pino from "pino";
 import { db, schema as dbSchema, eq } from "@/lib/db";
 import { findExistingSchema } from "@/lib/db/queries/schema";
 import { createDjb2Hash } from "@/lib/hash";
+
+const logger = pino({
+	name: "schema-processor",
+	level: "debug",
+});
 
 // GraphQL built-in types to skip
 const BUILTIN_TYPES = new Set([
@@ -30,21 +36,18 @@ export async function extractAndInsertTypes(
 	schemaVersionId: string,
 	projectId: string,
 ) {
-	console.log(
-		`[Schema Processor] extractAndInsertTypes: Starting for schema version ${schemaVersionId}`,
-	);
+	logger.debug({ schemaVersionId }, "extractAndInsertTypes: Starting");
 
 	const types = introspection.__schema.types;
 
 	if (!types) {
-		console.error(
-			`[Schema Processor] extractAndInsertTypes: types is undefined`,
-		);
+		logger.error("extractAndInsertTypes: types is undefined");
 		throw new Error("introspection.__schema.types is undefined");
 	}
 
-	console.log(
-		`[Schema Processor] extractAndInsertTypes: Processing ${types.length} types`,
+	logger.debug(
+		{ typesCount: types.length },
+		"extractAndInsertTypes: Processing types",
 	);
 
 	// Filter out built-in types
@@ -52,8 +55,9 @@ export async function extractAndInsertTypes(
 		(type) => !type.name.startsWith("__") && !BUILTIN_TYPES.has(type.name),
 	);
 
-	console.log(
-		`[Schema Processor] extractAndInsertTypes: Found ${customTypes.length} custom types`,
+	logger.debug(
+		{ customTypesCount: customTypes.length },
+		"extractAndInsertTypes: Found custom types",
 	);
 
 	// Prepare batch insert data
@@ -74,22 +78,17 @@ export async function extractAndInsertTypes(
 
 	// Batch insert all types
 	if (typesToInsert.length > 0) {
-		console.log(
-			`[Schema Processor] extractAndInsertTypes: Inserting ${typesToInsert.length} types into database`,
+		logger.debug(
+			{ count: typesToInsert.length },
+			"extractAndInsertTypes: Inserting types into database",
 		);
 		try {
 			await db.insert(dbSchema.schemaTypes).values(typesToInsert);
-			console.log(
-				`[Schema Processor] extractAndInsertTypes: Successfully inserted types`,
-			);
+			logger.debug("extractAndInsertTypes: Successfully inserted types");
 		} catch (error) {
-			console.error(
-				`[Schema Processor] extractAndInsertTypes: Database error:`,
-				error,
-			);
-			console.error(
-				`[Schema Processor] extractAndInsertTypes: Sample data:`,
-				JSON.stringify(typesToInsert[0], null, 2),
+			logger.error(
+				{ error, sampleData: typesToInsert[0] },
+				"extractAndInsertTypes: Database error",
 			);
 			throw error;
 		}
@@ -116,16 +115,12 @@ export async function extractAndInsertFields(
 	schemaVersionId: string,
 	projectId: string,
 ) {
-	console.log(
-		`[Schema Processor] extractAndInsertFields: Starting for schema version ${schemaVersionId}`,
-	);
+	logger.debug({ schemaVersionId }, "extractAndInsertFields: Starting");
 
 	const types = introspection.__schema.types;
 
 	if (!types) {
-		console.error(
-			`[Schema Processor] extractAndInsertFields: types is undefined`,
-		);
+		logger.error("extractAndInsertFields: types is undefined");
 		throw new Error("introspection.__schema.types is undefined");
 	}
 
@@ -137,8 +132,9 @@ export async function extractAndInsertFields(
 			!BUILTIN_TYPES.has(type.name),
 	);
 
-	console.log(
-		`[Schema Processor] extractAndInsertFields: Found ${typesWithFields.length} types with potential fields`,
+	logger.debug(
+		{ typesWithFieldsCount: typesWithFields.length },
+		"extractAndInsertFields: Found types with potential fields",
 	);
 
 	const fieldsToInsert = [];
@@ -180,29 +176,22 @@ export async function extractAndInsertFields(
 
 	// Batch insert all fields
 	if (fieldsToInsert.length > 0) {
-		console.log(
-			`[Schema Processor] extractAndInsertFields: Inserting ${fieldsToInsert.length} fields into database`,
+		logger.debug(
+			{ count: fieldsToInsert.length },
+			"extractAndInsertFields: Inserting fields into database",
 		);
 		try {
 			await db.insert(dbSchema.schemaFields).values(fieldsToInsert);
-			console.log(
-				`[Schema Processor] extractAndInsertFields: Successfully inserted fields`,
-			);
+			logger.debug("extractAndInsertFields: Successfully inserted fields");
 		} catch (error) {
-			console.error(
-				`[Schema Processor] extractAndInsertFields: Database error:`,
-				error,
-			);
-			console.error(
-				`[Schema Processor] extractAndInsertFields: Sample data:`,
-				JSON.stringify(fieldsToInsert[0], null, 2),
+			logger.error(
+				{ error, sampleData: fieldsToInsert[0] },
+				"extractAndInsertFields: Database error",
 			);
 			throw error;
 		}
 	} else {
-		console.log(
-			`[Schema Processor] extractAndInsertFields: No fields to insert`,
-		);
+		logger.debug("extractAndInsertFields: No fields to insert");
 	}
 
 	return fieldsToInsert.length;
@@ -218,30 +207,29 @@ export async function processSchemaIntrospection(
 	introspection: IntrospectionQuery,
 	projectId: string,
 ) {
-	console.log(
-		`[Schema Processor] processSchemaIntrospection: Starting for project ${projectId}`,
-	);
+	logger.info({ projectId }, "processSchemaIntrospection: Starting");
 
 	// Validate input
 	if (!introspection) {
-		console.error(`[Schema Processor] introspection is undefined`);
+		logger.error("introspection is undefined");
 		throw new Error("introspection is undefined");
 	}
 
 	if (!introspection.__schema) {
-		console.error(`[Schema Processor] introspection.__schema is undefined`);
+		logger.error("introspection.__schema is undefined");
 		throw new Error("introspection.__schema is undefined");
 	}
 
 	// Generate hash to check if schema changed
 	const schemaHash = generateSchemaHash(introspection);
-	console.log(`[Schema Processor] Generated schema hash: ${schemaHash}`);
+	logger.debug({ schemaHash }, "Generated schema hash");
 
 	const existing = await findExistingSchema(projectId, schemaHash);
 
 	if (existing) {
-		console.log(
-			`[Schema Processor] Found existing schema version ${existing.id} for project ${projectId}`,
+		logger.info(
+			{ schemaVersionId: existing.id, projectId },
+			"Found existing schema version",
 		);
 		// Schema unchanged - no work needed
 		return {
@@ -252,15 +240,11 @@ export async function processSchemaIntrospection(
 		};
 	}
 
-	console.log(
-		`[Schema Processor] No existing schema found, creating new version`,
-	);
+	logger.info("No existing schema found, creating new version");
 
 	// Generate new schema version ID first
 	const schemaVersionId = nanoid();
-	console.log(
-		`[Schema Processor] Generated new schema version ID: ${schemaVersionId}`,
-	);
+	logger.debug({ schemaVersionId }, "Generated new schema version ID");
 
 	// Count operations
 	const schema = introspection.__schema;
@@ -269,10 +253,10 @@ export async function processSchemaIntrospection(
 	if (schema.mutationType) operationCount++;
 	if (schema.subscriptionType) operationCount++;
 
-	console.log(`[Schema Processor] Found ${operationCount} operation types`);
+	logger.debug({ operationCount }, "Found operation types");
 
 	// Create schema version record FIRST (so foreign keys work)
-	console.log(`[Schema Processor] Creating schema version record`);
+	logger.debug("Creating schema version record");
 	try {
 		await db.insert(dbSchema.schemaVersions).values({
 			id: schemaVersionId,
@@ -284,7 +268,7 @@ export async function processSchemaIntrospection(
 			introspectionData: introspection,
 		});
 	} catch (error) {
-		console.error(`[Schema Processor] Error creating schema version:`, error);
+		logger.error({ error }, "Error creating schema version");
 		throw error;
 	}
 
@@ -303,22 +287,13 @@ export async function processSchemaIntrospection(
 	);
 
 	// Update schema version with counts
-	console.log(`[Schema Processor] Updating schema version with counts`);
+	logger.debug("Updating schema version with counts");
 	await db
 		.update(dbSchema.schemaVersions)
 		.set({ typeCount, fieldCount })
 		.where(eq(dbSchema.schemaVersions.id, schemaVersionId));
 
-	// Update project's latest schema hash for quick lookups
-	console.log(`[Schema Processor] Updating project's latest schema hash`);
-	await db
-		.update(dbSchema.projects)
-		.set({ latestSchemaHash: schemaHash.toString() })
-		.where(eq(dbSchema.projects.id, projectId));
-
-	console.log(
-		`[Schema Processor] Successfully processed schema: ${typeCount} types, ${fieldCount} fields`,
-	);
+	logger.info({ typeCount, fieldCount }, "Successfully processed schema");
 
 	return {
 		schemaVersionId,

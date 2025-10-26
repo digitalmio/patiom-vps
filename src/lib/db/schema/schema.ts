@@ -15,33 +15,42 @@ import { projects } from "./app";
 // THIS IS FOR GRAPHQL SCHEMA TABLES, NOT WHOLE DB SCHEMA
 
 // Schema versions (track schema evolution)
-export const schemaVersions = pgTable("schema_versions", {
-	id: text("id").primaryKey(), // nanoid or similar
-	projectId: text("project_id")
-		.notNull()
-		.references(() => projects.id, { onDelete: "cascade" }),
-	schemaHash: integer("schema_hash").notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	isActive: boolean("is_active").default(true),
+export const schemaVersions = pgTable(
+	"schema_versions",
+	{
+		id: text("id").primaryKey(), // nanoid or similar
+		projectId: text("project_id")
+			.notNull()
+			.references(() => projects.id, { onDelete: "cascade" }),
+		schemaHash: integer("schema_hash").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		isActive: boolean("is_active").default(true),
 
-	// Schema metadata
-	typeCount: integer("type_count"),
-	fieldCount: integer("field_count"),
-	operationCount: integer("operation_count"),
+		// Schema metadata
+		typeCount: integer("type_count"),
+		fieldCount: integer("field_count"),
+		operationCount: integer("operation_count"),
 
-	// Change detection
-	previousVersionId: text("previous_version_id"),
-	changesSummary: json("changes_summary").$type<{
-		addedTypes?: string[];
-		removedTypes?: string[];
-		addedFields?: string[];
-		removedFields?: string[];
-		deprecatedFields?: string[];
-	}>(),
+		// Change detection
+		previousVersionId: text("previous_version_id"),
+		changesSummary: json("changes_summary").$type<{
+			addedTypes?: string[];
+			removedTypes?: string[];
+			addedFields?: string[];
+			removedFields?: string[];
+			deprecatedFields?: string[];
+		}>(),
 
-	// Store full introspection for reference
-	introspectionData: json("introspection_data"),
-});
+		// Store full introspection for reference
+		introspectionData: json("introspection_data"),
+	},
+	(table) => [
+		index("idx_schema_versions_project_active").on(
+			table.projectId,
+			table.isActive,
+		),
+	],
+);
 
 // Schema types (populated from schema introspection)
 export const schemaTypes = pgTable(

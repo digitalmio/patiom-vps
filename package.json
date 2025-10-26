@@ -50,6 +50,7 @@
     "ioredis": "^5.8.1",
     "lucide-react": "^0.544.0",
     "nanoid": "^5.1.6",
+    "pino": "^10.1.0",
     "postgres": "^3.4.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

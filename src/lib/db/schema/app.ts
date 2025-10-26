@@ -9,7 +9,6 @@ export const projects = pgTable("projects", {
 		.references(() => user.id, { onDelete: "cascade" }),
 	name: text("name").notNull(),
 	description: text("description"),
-	latestSchemaHash: text("latest_schema_hash"), // nullable as initially no schema for new project!
 	ingestionToken: text("ingestion_schema_token")
 		.unique()
 		.notNull()
