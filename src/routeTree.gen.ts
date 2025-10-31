@@ -9,9 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as OldIndexRouteImport } from './routes/old-index'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo/tanstack-query'
 import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
@@ -27,9 +27,9 @@ import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
 import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ssr.data-only'
 
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const OldIndexRoute = OldIndexRouteImport.update({
+  id: '/old-index',
+  path: '/old-index',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -37,8 +37,8 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/_app/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
@@ -114,11 +114,11 @@ const DemoStartSsrDataOnlyRoute = DemoStartSsrDataOnlyRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/dashboard': typeof DashboardRoute
+  '/old-index': typeof OldIndexRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ingest/$type': typeof ApiIngestTypeRoute
   '/demo/api/names': typeof DemoApiNamesRoute
@@ -133,11 +133,11 @@ export interface FileRoutesByFullPath {
   '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/dashboard': typeof DashboardRoute
+  '/old-index': typeof OldIndexRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ingest/$type': typeof ApiIngestTypeRoute
   '/demo/api/names': typeof DemoApiNamesRoute
@@ -153,11 +153,11 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/dashboard': typeof DashboardRoute
+  '/old-index': typeof OldIndexRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/_app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/ingest/$type': typeof ApiIngestTypeRoute
   '/demo/api/names': typeof DemoApiNamesRoute
@@ -174,11 +174,11 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/auth'
-    | '/dashboard'
+    | '/old-index'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/'
     | '/api/auth/$'
     | '/api/ingest/$type'
     | '/demo/api/names'
@@ -193,11 +193,11 @@ export interface FileRouteTypes {
     | '/demo/start/ssr'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/auth'
-    | '/dashboard'
+    | '/old-index'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/'
     | '/api/auth/$'
     | '/api/ingest/$type'
     | '/demo/api/names'
@@ -212,11 +212,11 @@ export interface FileRouteTypes {
     | '/demo/start/ssr'
   id:
     | '__root__'
-    | '/'
     | '/auth'
-    | '/dashboard'
+    | '/old-index'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/_app/'
     | '/api/auth/$'
     | '/api/ingest/$type'
     | '/demo/api/names'
@@ -232,11 +232,11 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
-  DashboardRoute: typeof DashboardRoute
+  OldIndexRoute: typeof OldIndexRoute
   DemoTableRoute: typeof DemoTableRoute
   DemoTanstackQueryRoute: typeof DemoTanstackQueryRoute
+  AppIndexRoute: typeof AppIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiIngestTypeRoute: typeof ApiIngestTypeRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
@@ -253,11 +253,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
+    '/old-index': {
+      id: '/old-index'
+      path: '/old-index'
+      fullPath: '/old-index'
+      preLoaderRoute: typeof OldIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -267,11 +267,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/tanstack-query': {
@@ -376,11 +376,11 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
-  DashboardRoute: DashboardRoute,
+  OldIndexRoute: OldIndexRoute,
   DemoTableRoute: DemoTableRoute,
   DemoTanstackQueryRoute: DemoTanstackQueryRoute,
+  AppIndexRoute: AppIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiIngestTypeRoute: ApiIngestTypeRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,

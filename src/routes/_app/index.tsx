@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/app-sidebar/app-sidebar";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -15,7 +15,7 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_app/")({
 	component: RouteComponent,
 });
 

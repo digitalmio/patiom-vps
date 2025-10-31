@@ -3,18 +3,19 @@ import {
 	BookOpen,
 	Bot,
 	Command,
+	FolderDot,
 	Frame,
 	GalleryVerticalEnd,
 	PieChart,
+	Settings,
 	Settings2,
 	SquareTerminal,
 } from "lucide-react";
 import type * as React from "react";
-
-import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
-import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
+import { NavProjects } from "@/components/app-sidebar/nav-projects";
+import { NavMain, NavSecondary } from "@/components/app-sidebar/nav-secondary";
+import { NavUser } from "@/components/app-sidebar/nav-user";
+import { ProjectSwitcher } from "@/components/app-sidebar/project-switcher";
 import {
 	Sidebar,
 	SidebarContent,
@@ -30,21 +31,11 @@ const data = {
 		email: "m@example.com",
 		avatar: "/avatars/shadcn.jpg",
 	},
-	teams: [
+	projects: [
 		{
-			name: "Acme Inc",
-			logo: GalleryVerticalEnd,
+			name: "The only project",
+			// logo: GalleryVerticalEnd,
 			plan: "Enterprise",
-		},
-		{
-			name: "Acme Corp.",
-			logo: AudioWaveform,
-			plan: "Startup",
-		},
-		{
-			name: "Evil Corp.",
-			logo: Command,
-			plan: "Free",
 		},
 	],
 	navMain: [
@@ -134,16 +125,16 @@ const data = {
 			],
 		},
 	],
-	projects: [
+	secondary: [
 		{
-			name: "Design Engineering",
+			name: "Projects",
 			url: "#",
-			icon: Frame,
+			icon: FolderDot,
 		},
 		{
-			name: "Sales & Marketing",
+			name: "Settings",
 			url: "#",
-			icon: PieChart,
+			icon: Settings,
 		},
 	],
 };
@@ -152,11 +143,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
-				<TeamSwitcher teams={data.teams} />
+				<ProjectSwitcher projects={data.projects} />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={data.navMain} />
-				<NavProjects projects={data.projects} />
+				{/* <NavMain items={data.navMain} /> */}
+				<NavProjects projects={data.secondary} />
+				<NavSecondary projects={data.secondary} />
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser user={data.user} />

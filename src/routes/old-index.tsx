@@ -9,7 +9,7 @@ import {
 	Zap,
 } from "lucide-react";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/old-index")({
 	component: App,
 });
 
@@ -51,7 +51,7 @@ function App() {
 			description:
 				"Built from the ground up for modern web applications. Deploy anywhere JavaScript runs.",
 		},
-	];
+	]
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -117,5 +117,5 @@ function App() {
 				</div>
 			</section>
 		</div>
-	);
+	)
 }
