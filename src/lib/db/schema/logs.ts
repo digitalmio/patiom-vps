@@ -33,7 +33,9 @@ import { projects } from "./app";
 export const requestLogs = pgTable(
 	"request_logs",
 	{
-		id: text("id").default(nanoid()).notNull(),
+		id: text("id")
+			.$defaultFn(() => nanoid())
+			.notNull(),
 		timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 		projectId: text("project_id")
 			.notNull()

@@ -13,12 +13,14 @@
     "migrate:dev": "drizzle-kit migrate dev",
     "migrate:push": "drizzle-kit push",
     "start": "node --env-file .env .output/server/index.mjs",
-    "worker:schema": "tsx --env-file .env src/workers/schema/worker.ts",
-    "worker:logs": "tsx --env-file .env src/workers/logs/worker.ts",
-    "workers": "concurrently \"pnpm run worker:schema\" \"pnpm run worker:logs\""
+    "ingest:dev": "tsx --env-file .env src/ingestor/index.ts",
+    "worker:schema:dev": "tsx --env-file .env src/workers/schema/worker.ts",
+    "worker:logs:dev": "tsx --env-file .env src/workers/logs/worker.ts",
+    "ingest+workers:dev": "concurrently \"pnpm run ingest:dev\" \"pnpm run worker:schema:dev\" \"pnpm run worker:logs:dev\""
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
+    "@hono/node-server": "^1.19.6",
     "@maxmind/geoip2-node": "^6.2.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -53,6 +55,7 @@
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.44.6",
     "graphql": "^16.11.0",
+    "hono": "^4.10.4",
     "ioredis": "^5.8.1",
     "lucide-react": "^0.544.0",
     "nanoid": "^5.1.6",

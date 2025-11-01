@@ -18,7 +18,9 @@ import { projects } from "./app";
 export const schemaVersions = pgTable(
 	"schema_versions",
 	{
-		id: text("id").default(nanoid()).primaryKey(), // nanoid or similar
+		id: text("id")
+			.$defaultFn(() => nanoid())
+			.primaryKey(), // nanoid or similar
 		projectId: text("project_id")
 			.notNull()
 			.references(() => projects.id, { onDelete: "cascade" }),

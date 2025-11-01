@@ -3,7 +3,9 @@ import { nanoid } from "nanoid";
 import { user } from "./auth";
 
 export const projects = pgTable("projects", {
-	id: text("id").primaryKey().default(nanoid(10)),
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => nanoid(10)),
 	userId: text("user_id")
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),

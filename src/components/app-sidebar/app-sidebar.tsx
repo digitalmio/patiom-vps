@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type * as React from "react";
 import { NavProjects } from "@/components/app-sidebar/nav-projects";
-import { NavMain, NavSecondary } from "@/components/app-sidebar/nav-secondary";
+import { NavSecondary } from "@/components/app-sidebar/nav-secondary";
 import { NavUser } from "@/components/app-sidebar/nav-user";
 import { ProjectSwitcher } from "@/components/app-sidebar/project-switcher";
 import {

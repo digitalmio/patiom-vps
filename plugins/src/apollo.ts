@@ -90,7 +90,7 @@ function warnFetch(fetchFn: unknown): void {
 const getHostname = (): string => {
 	const endpoint = process.env.PATIOM_ENDPOINT;
 	return endpoint === "local" || endpoint === "staging"
-		? "http://127.0.0.1:3000"
+		? "http://127.0.0.1:4000"
 		: "https://patiom.dev";
 };
 
