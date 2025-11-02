@@ -126,3 +126,37 @@ export function extractFieldPaths(
 		return [];
 	}
 }
+
+/**
+ * Extract the operation type from a GraphQL operation
+ * Returns "query", "mutation", "subscription", or null if unable to determine
+ */
+export function extractOperationType(
+	operation: string,
+	operationName?: string | null,
+): "query" | "mutation" | "subscription" | null {
+	try {
+		const ast: DocumentNode = parse(operation);
+
+		let operationType: "query" | "mutation" | "subscription" | null = null;
+
+		visit(ast, {
+			OperationDefinition(node) {
+				// If operation name is specified, only process that operation
+				if (operationName && node.name?.value !== operationName) {
+					return false; // Skip this operation
+				}
+
+				// Extract the operation type
+				operationType = node.operation;
+				return false; // Stop visiting once we found it
+			},
+		});
+
+		return operationType;
+	} catch (error) {
+		// Invalid GraphQL - return null
+		console.error("Failed to parse GraphQL operation:", error);
+		return null;
+	}
+}

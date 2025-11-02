@@ -1,15 +1,12 @@
 import {
-	AudioWaveform,
-	BookOpen,
-	Bot,
-	Command,
+	Activity,
+	AlertCircle,
+	Boxes,
 	FolderDot,
-	Frame,
-	GalleryVerticalEnd,
-	PieChart,
+	Grid3x3,
+	LayoutDashboard,
+	Plus,
 	Settings,
-	Settings2,
-	SquareTerminal,
 } from "lucide-react";
 import type * as React from "react";
 import { NavProjects } from "@/components/app-sidebar/nav-projects";
@@ -34,102 +31,46 @@ const data = {
 	projects: [
 		{
 			name: "The only project",
-			// logo: GalleryVerticalEnd,
 			plan: "Enterprise",
 		},
 	],
-	navMain: [
+	projectNav: [
 		{
-			title: "Playground",
+			name: "Overview",
 			url: "#",
-			icon: SquareTerminal,
-			isActive: true,
-			items: [
-				{
-					title: "History",
-					url: "#",
-				},
-				{
-					title: "Starred",
-					url: "#",
-				},
-				{
-					title: "Settings",
-					url: "#",
-				},
-			],
+			icon: LayoutDashboard,
 		},
 		{
-			title: "Models",
+			name: "Operations",
 			url: "#",
-			icon: Bot,
-			items: [
-				{
-					title: "Genesis",
-					url: "#",
-				},
-				{
-					title: "Explorer",
-					url: "#",
-				},
-				{
-					title: "Quantum",
-					url: "#",
-				},
-			],
+			icon: Activity,
 		},
 		{
-			title: "Documentation",
+			name: "Fields",
 			url: "#",
-			icon: BookOpen,
-			items: [
-				{
-					title: "Introduction",
-					url: "#",
-				},
-				{
-					title: "Get Started",
-					url: "#",
-				},
-				{
-					title: "Tutorials",
-					url: "#",
-				},
-				{
-					title: "Changelog",
-					url: "#",
-				},
-			],
+			icon: Grid3x3,
 		},
 		{
-			title: "Settings",
+			name: "Types",
 			url: "#",
-			icon: Settings2,
-			items: [
-				{
-					title: "General",
-					url: "#",
-				},
-				{
-					title: "Team",
-					url: "#",
-				},
-				{
-					title: "Billing",
-					url: "#",
-				},
-				{
-					title: "Limits",
-					url: "#",
-				},
-			],
+			icon: Boxes,
+		},
+		{
+			name: "Errors",
+			url: "#",
+			icon: AlertCircle,
 		},
 	],
-	secondary: [
+	mainNav: [
 		{
-			name: "Projects",
+			name: "All Projects",
 			url: "#",
 			icon: FolderDot,
+		},
+		{
+			name: "Add New Project",
+			url: "#",
+			icon: Plus,
 		},
 		{
 			name: "Settings",
@@ -143,12 +84,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
+				<div className="py-2 px-2 border-b-slate-100 border-b">
+					<img src="/logo/patiom-logo.svg" alt="Patiom Logo" className="h-8" />
+				</div>
+			</SidebarHeader>
+			<SidebarHeader>
 				<ProjectSwitcher projects={data.projects} />
 			</SidebarHeader>
 			<SidebarContent>
-				{/* <NavMain items={data.navMain} /> */}
-				<NavProjects projects={data.secondary} />
-				<NavSecondary projects={data.secondary} />
+				<NavProjects projects={data.projectNav} />
+				<NavSecondary links={data.mainNav} />
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser user={data.user} />

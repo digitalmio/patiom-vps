@@ -161,6 +161,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 				},
 			};
 		},
+		// biome-ignore lint/suspicious/noExplicitAny: this is sent by Apollo Server
 		async requestDidStart(requestCtx: any) {
 			const start = Date.now();
 			const { request } = requestCtx;
@@ -174,6 +175,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 			if (headers.has("gcdn-request-id")) return undefined;
 
 			return {
+				// biome-ignore lint/suspicious/noExplicitAny: this is sent by Apollo Server
 				async willSendResponse(respContext: any) {
 					const { response, source } = respContext;
 

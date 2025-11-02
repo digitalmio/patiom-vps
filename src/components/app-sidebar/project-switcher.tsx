@@ -1,6 +1,4 @@
-"use client";
-
-import { AudioWaveform, ChevronsUpDown, Plus } from "lucide-react";
+import { ChevronsUpDown, Layers, Plus } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -9,7 +7,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -35,7 +32,7 @@ export function ProjectSwitcher({
 		return null;
 	}
 
-	const Logo = activeProject.logo ?? AudioWaveform;
+	const Logo = activeProject.logo ?? Layers;
 
 	return (
 		<SidebarMenu>
@@ -65,10 +62,10 @@ export function ProjectSwitcher({
 						sideOffset={4}
 					>
 						<DropdownMenuLabel className="text-muted-foreground text-xs">
-							Projects
+							Your Projects
 						</DropdownMenuLabel>
-						{projects.map((project, index) => {
-							const ProjectLogo = project.logo ?? AudioWaveform;
+						{projects.map((project) => {
+							const ProjectLogo = project.logo ?? Layers;
 							return (
 								<DropdownMenuItem
 									key={project.name}
@@ -79,7 +76,6 @@ export function ProjectSwitcher({
 										<ProjectLogo className="size-3.5 shrink-0" />
 									</div>
 									{project.name}
-									{/* <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut> */}
 								</DropdownMenuItem>
 							);
 						})}

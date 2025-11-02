@@ -45,6 +45,7 @@ export const requestLogs = pgTable(
 		schemaVersionId: text("schema_version_id"),
 
 		// GraphQL Operation
+		operationType: varchar("operation_type", { length: 20 }), // query, mutation, subscription
 		operationName: varchar("operation_name", { length: 255 }),
 		operation: text("operation").notNull(),
 		variableHash: bigint("variable_hash", { mode: "number" }),
@@ -77,8 +78,6 @@ export const requestLogs = pgTable(
 		countryCode: varchar("country_code", { length: 2 }), // ISO 3166-1 alpha-2
 		countryName: varchar("country_name", { length: 100 }),
 		city: varchar("city", { length: 100 }),
-		latitude: text("latitude"), // Stored as text to avoid precision issues
-		longitude: text("longitude"),
 
 		// Cache variation tracking
 		varyHash: bigint("vary_hash", { mode: "number" }),
@@ -115,6 +114,11 @@ export const requestLogs = pgTable(
 		index("idx_request_logs_project_operation").on(
 			table.projectId,
 			table.operationName,
+			table.timestamp,
+		),
+		index("idx_request_logs_project_operation_type").on(
+			table.projectId,
+			table.operationType,
 			table.timestamp,
 		),
 		index("idx_request_logs_project_status").on(

@@ -8,7 +8,7 @@ import { db, schema } from "@/lib/db";
 import { resolveFieldIds } from "@/lib/db/queries/fields";
 import { getActiveSchemaVersion } from "@/lib/db/queries/schema";
 import { parseIpGeolocation } from "@/lib/geo";
-import { extractFieldPaths } from "@/lib/graphql-parser";
+import { extractFieldPaths, extractOperationType } from "@/lib/graphql-parser";
 import { parseUserAgent } from "@/lib/user-agent";
 import type { LogJobData } from "./worker.types";
 
@@ -50,6 +50,12 @@ export const logsWorker = new Worker<LogJobData>(
 			? (activeSchema.introspectionData as IntrospectionQuery)
 			: null;
 
+		// Extract operation type (query, mutation, subscription)
+		const operationType = extractOperationType(
+			data.operation,
+			data.operationName,
+		);
+
 		logger.debug({ jobId: job.id }, "Extracting field paths from operation");
 		const requestedFields = extractFieldPaths(
 			data.operation,
@@ -82,6 +88,7 @@ export const logsWorker = new Worker<LogJobData>(
 				schemaVersionId: activeSchema?.id || null,
 
 				// GraphQL Operation
+				operationType,
 				operationName: data.operationName || null,
 				operation: data.operation,
 				variableHash: data.variableHash || null,
@@ -114,8 +121,6 @@ export const logsWorker = new Worker<LogJobData>(
 				countryCode: geoInfo.countryCode,
 				countryName: geoInfo.countryName,
 				city: geoInfo.city,
-				latitude: geoInfo.latitude,
-				longitude: geoInfo.longitude,
 
 				// Cache
 				varyHash: data.varyHash || null, // Errors
