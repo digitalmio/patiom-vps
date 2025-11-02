@@ -14,7 +14,7 @@ export const projects = pgTable("projects", {
 	ingestionToken: text("ingestion_schema_token")
 		.unique()
 		.notNull()
-		.default(`ptm_${nanoid()}`),
+		.$defaultFn(() => `ptm_${nanoid()}`),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.defaultNow()

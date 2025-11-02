@@ -18,6 +18,7 @@ export {
 
 export const db = drizzle(postgres(env.DATABASE_URL as string), {
 	schema,
+	casing: "snake_case",
 });
 
 export { schema };

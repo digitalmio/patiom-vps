@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react";
-
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -19,7 +18,7 @@ export function NavSecondary({
 }) {
 	return (
 		<SidebarGroup className="mt-auto group/collapsible">
-			<SidebarGroupLabel>Main</SidebarGroupLabel>
+			<SidebarGroupLabel>Main menu</SidebarGroupLabel>
 			<SidebarMenu>
 				{links.map((item) => (
 					<SidebarMenuItem key={item.name}>

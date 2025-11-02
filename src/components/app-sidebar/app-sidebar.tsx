@@ -20,13 +20,13 @@ import {
 	SidebarHeader,
 	SidebarRail,
 } from "@/components/ui/sidebar";
+import { Logo } from "./logo";
 
-// This is sample data.
 const data = {
 	user: {
 		name: "shadcn",
 		email: "m@example.com",
-		avatar: "/avatars/shadcn.jpg",
+		avatar: "https://avatars.githubusercontent.com/u/226042?v=4",
 	},
 	projects: [
 		{
@@ -83,10 +83,8 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
-			<SidebarHeader>
-				<div className="py-2 px-2 border-b-slate-100 border-b">
-					<img src="/logo/patiom-logo.svg" alt="Patiom Logo" className="h-8" />
-				</div>
+			<SidebarHeader className="border-b">
+				<Logo />
 			</SidebarHeader>
 			<SidebarHeader>
 				<ProjectSwitcher projects={data.projects} />
