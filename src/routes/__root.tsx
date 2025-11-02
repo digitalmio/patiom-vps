@@ -25,7 +25,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "TanStack Start Starter",
+				title: "Patiom. GraphQL analytics platform",
 			},
 		],
 		links: [
@@ -33,6 +33,18 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				rel: "stylesheet",
 				href: appCss,
 			},
+			{
+				rel: "icon",
+				type: "image/svg+xml",
+				href: "/logo/patiom-icon.svg",
+			},
+			// to be added when dark mode is supported
+			// {
+			// 	rel: "icon",
+			// 	type: "image/svg+xml",
+			// 	href: "/logo/patiom-icon-dark.svg",
+			// 	media: "(prefers-color-scheme: dark)",
+			// },
 		],
 	}),
 
