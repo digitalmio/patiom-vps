@@ -1,26 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Logo } from "@/components/app-sidebar/logo";
 import { LoginForm } from "@/components/login-form";
-import { authClient } from "@/lib/auth/client";
+import { getUserData } from "@/services/auth-server-fn";
 
 export const Route = createFileRoute("/auth")({
 	component: RouteComponent,
-	// beforeLoad: async () => {
-	// 	console.log("Auth route - beforeLoad");
-	// 	const req = getRequest();
-	// 	// Check if user is already logged in
-	// 	const session = await authClient.getSession({
-	// 		fetchOptions: {
-	// 			headers: req.headers as HeadersInit,
-	// 		},
-	// 	});
-	// 	console.log("Auth route - session:", session);
-
-	// 	if (session.data?.session) {
-	// 		// User is logged in, redirect to home
-	// 		throw redirect({ to: "/" });
-	// 	}
-	// },
+	beforeLoad: async () => {
+		const userId = await getUserData().then((data) => data?.id);
+		if (userId) {
+			throw redirect({ to: "/" });
+		}
+	},
 });
 
 function RouteComponent() {

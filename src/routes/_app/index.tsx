@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar/app-sidebar";
 import {
 	Breadcrumb,
@@ -14,9 +14,16 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { getUserData } from "@/services/auth-server-fn";
 
 export const Route = createFileRoute("/_app/")({
 	component: RouteComponent,
+	beforeLoad: async () => {
+		const userId = await getUserData().then((data) => data?.id);
+		if (!userId) {
+			throw redirect({ to: "/" });
+		}
+	},
 });
 
 function RouteComponent() {
