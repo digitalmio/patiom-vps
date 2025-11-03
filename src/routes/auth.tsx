@@ -5,6 +5,9 @@ import { getUserData } from "@/services/auth-server-fn";
 
 export const Route = createFileRoute("/auth")({
 	component: RouteComponent,
+	staticData: {
+		path: [["Auth", "/auth"]],
+	},
 	beforeLoad: async () => {
 		const userId = await getUserData().then((data) => data?.id);
 		if (userId) {
