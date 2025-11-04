@@ -20,16 +20,11 @@ import {
 	SidebarHeader,
 	SidebarRail,
 } from "@/components/ui/sidebar";
+import type { schema } from "@/lib/db";
 import { Logo } from "../logo";
 
 const data = {
-	projects: [
-		{
-			name: "The only project",
-			plan: "Enterprise",
-		},
-	],
-	projectNav: [
+	projectMenu: [
 		{
 			name: "Overview",
 			url: "#",
@@ -77,9 +72,11 @@ const data = {
 
 export function AppSidebar({
 	userData,
+	projects,
 	...props
 }: React.ComponentProps<typeof Sidebar> & {
 	userData: { name: string; email: string; image?: string };
+	projects: Array<typeof schema.projects.$inferSelect>;
 }) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
@@ -87,10 +84,10 @@ export function AppSidebar({
 				<Logo />
 			</SidebarHeader>
 			<SidebarHeader>
-				<ProjectSwitcher projects={data.projects} />
+				<ProjectSwitcher projects={projects} />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavProjects projects={data.projectNav} />
+				<NavProjects projectMenu={data.projectMenu} />
 				<NavSecondary links={data.mainNav} />
 			</SidebarContent>
 			<SidebarFooter>

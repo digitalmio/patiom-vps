@@ -15,15 +15,12 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import type { schema } from "@/lib/db";
 
 export function ProjectSwitcher({
 	projects,
 }: {
-	projects: {
-		name: string;
-		logo?: React.ElementType;
-		plan: string;
-	}[];
+	projects: (typeof schema.projects.$inferSelect)[];
 }) {
 	const { isMobile } = useSidebar();
 	const [activeProject, setActiveProject] = React.useState(projects[0]);
@@ -31,8 +28,6 @@ export function ProjectSwitcher({
 	if (!activeProject) {
 		return null;
 	}
-
-	const Logo = activeProject.logo ?? Layers;
 
 	return (
 		<SidebarMenu>
@@ -44,13 +39,15 @@ export function ProjectSwitcher({
 							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 						>
 							<div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-								<Logo className="size-4" />
+								<Layers className="size-4" />
 							</div>
 							<div className="grid flex-1 text-left text-sm leading-tight">
 								<span className="truncate font-medium">
 									{activeProject.name}
 								</span>
-								<span className="truncate text-xs">{activeProject.plan}</span>
+								<span className="truncate text-xs">
+									{activeProject.description}
+								</span>
 							</div>
 							<ChevronsUpDown className="ml-auto" />
 						</SidebarMenuButton>
@@ -65,7 +62,6 @@ export function ProjectSwitcher({
 							Your Projects
 						</DropdownMenuLabel>
 						{projects.map((project) => {
-							const ProjectLogo = project.logo ?? Layers;
 							return (
 								<DropdownMenuItem
 									key={project.name}
@@ -73,7 +69,7 @@ export function ProjectSwitcher({
 									className="gap-2 p-2"
 								>
 									<div className="flex size-6 items-center justify-center rounded-md border">
-										<ProjectLogo className="size-3.5 shrink-0" />
+										<Layers className="size-3.5 shrink-0" />
 									</div>
 									{project.name}
 								</DropdownMenuItem>

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
 	SidebarGroup,
@@ -7,9 +8,9 @@ import {
 } from "@/components/ui/sidebar";
 
 export function NavProjects({
-	projects,
+	projectMenu,
 }: {
-	projects: {
+	projectMenu: {
 		name: string;
 		url: string;
 		icon: LucideIcon;
@@ -18,13 +19,13 @@ export function NavProjects({
 	return (
 		<SidebarGroup className="group/collapsible">
 			<SidebarMenu>
-				{projects.map((item) => (
+				{projectMenu.map((item) => (
 					<SidebarMenuItem key={item.name}>
 						<SidebarMenuButton asChild>
-							<a href={item.url}>
+							<Link to={item.url}>
 								<item.icon />
 								<span>{item.name}</span>
-							</a>
+							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				))}

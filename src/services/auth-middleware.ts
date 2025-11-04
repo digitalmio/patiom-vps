@@ -23,7 +23,7 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
 						id: undefined;
 						name: undefined;
 						email: undefined;
-						image: undefined;
+						image?: undefined;
 				  }
 				| {
 						id: string;
