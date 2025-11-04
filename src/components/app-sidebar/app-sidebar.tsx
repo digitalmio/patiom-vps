@@ -54,17 +54,17 @@ const data = {
 	mainNav: [
 		{
 			name: "All Projects",
-			url: "#",
+			url: "/",
 			icon: FolderDot,
 		},
 		{
 			name: "Add New Project",
-			url: "#",
+			url: "/new-project",
 			icon: Plus,
 		},
 		{
 			name: "Settings",
-			url: "#",
+			url: "/settings",
 			icon: Settings,
 		},
 	],
