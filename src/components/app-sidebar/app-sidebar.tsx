@@ -5,6 +5,7 @@ import {
 	FolderDot,
 	Grid3x3,
 	LayoutDashboard,
+	MessageCircle,
 	Plus,
 	Settings,
 } from "lucide-react";
@@ -61,6 +62,11 @@ const data = {
 			name: "Add New Project",
 			url: "/new-project",
 			icon: Plus,
+		},
+		{
+			name: "Feedback",
+			url: "/feedback",
+			icon: MessageCircle,
 		},
 		{
 			name: "Settings",
