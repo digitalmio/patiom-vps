@@ -20,7 +20,7 @@ import {
 	SidebarHeader,
 	SidebarRail,
 } from "@/components/ui/sidebar";
-import { Logo } from "./logo";
+import { Logo } from "../logo";
 
 const data = {
 	user: {

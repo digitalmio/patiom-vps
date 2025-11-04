@@ -91,7 +91,7 @@ const getHostname = (): string => {
 	const endpoint = process.env.PATIOM_ENDPOINT;
 	return endpoint === "local" || endpoint === "staging"
 		? "http://127.0.0.1:4000"
-		: "https://patiom.dev";
+		: "https://ingest.patiom.dev";
 };
 
 const hostname = getHostname();
