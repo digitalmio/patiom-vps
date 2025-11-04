@@ -23,11 +23,6 @@ import {
 import { Logo } from "../logo";
 
 const data = {
-	user: {
-		name: "shadcn",
-		email: "m@example.com",
-		avatar: "https://avatars.githubusercontent.com/u/226042?v=4",
-	},
 	projects: [
 		{
 			name: "The only project",
@@ -80,7 +75,12 @@ const data = {
 	],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+	userData,
+	...props
+}: React.ComponentProps<typeof Sidebar> & {
+	userData: { name: string; email: string; image?: string };
+}) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader className="border-b">
@@ -94,7 +94,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				<NavSecondary links={data.mainNav} />
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={data.user} />
+				<NavUser user={userData} />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>

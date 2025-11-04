@@ -18,7 +18,19 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
 				name: session?.user?.name,
 				email: session?.user?.email,
 				image: session?.user?.image,
-			},
+			} as
+				| {
+						id: undefined;
+						name: undefined;
+						email: undefined;
+						image: undefined;
+				  }
+				| {
+						id: string;
+						name: string;
+						email: string;
+						image: string | undefined;
+				  },
 		},
 	});
 });

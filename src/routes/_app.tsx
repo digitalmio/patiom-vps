@@ -4,17 +4,13 @@ import {
 	redirect,
 	useMatches,
 } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar/app-sidebar";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
-	BreadcrumbLink,
 	BreadcrumbList,
 	BreadcrumbPage,
-	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
@@ -26,33 +22,52 @@ import { getUserData } from "@/services/auth-server-fn";
 export const Route = createFileRoute("/_app")({
 	component: RouteComponent,
 	beforeLoad: async () => {
-		const userId = await getUserData().then((data) => data?.id);
+		const userData = await getUserData();
+		const userId = userData?.id;
+
+		// if not logged in, redirect to auth
 		if (!userId) {
 			throw redirect({ to: "/auth" });
 		}
+
+		// else return user data
+		return { userData };
+	},
+	loader: async ({ context }) => {
+		return {
+			userData: context.userData,
+		};
 	},
 });
 
 function RouteComponent() {
 	const matches = useMatches();
-	const currentRoute = matches[matches.length - 1];
-	const { path } = currentRoute.staticData || {};
-
-	console.log("Current Route Path:", path);
+	const { title } = matches[matches.length - 1].staticData || {};
+	const { userData } = Route.useLoaderData();
 
 	return (
 		<SidebarProvider>
-			<AppSidebar />
+			<AppSidebar userData={userData} />
 			<SidebarInset>
 				<header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-					<div className="flex items-center gap-2 px-4 w-full">
+					<div className="flex items-center gap-2 px-4">
 						<SidebarTrigger className="-ml-1" />
-						<Button size="sm" className="ml-auto">
-							<Plus /> Add New Project
-						</Button>
+						<Separator
+							orientation="vertical"
+							className="mr-2 data-[orientation=vertical]:h-4"
+						/>
+						<Breadcrumb>
+							<BreadcrumbList>
+								<BreadcrumbItem>
+									<BreadcrumbPage>{title}</BreadcrumbPage>
+								</BreadcrumbItem>
+							</BreadcrumbList>
+						</Breadcrumb>
 					</div>
 				</header>
-				<Outlet />
+				<div className="p-4">
+					<Outlet />
+				</div>
 			</SidebarInset>
 		</SidebarProvider>
 	);
