@@ -27,7 +27,7 @@ export function ProjectSwitcher({
 	const navigate = useNavigate();
 
 	const activeProjectData =
-		(activeProject && projects.find((p) => p.id === activeProject)) ||
+		(Boolean(activeProject) && projects.find((p) => p.id === activeProject)) ||
 		projects[0];
 
 	if (!activeProjectData) {
