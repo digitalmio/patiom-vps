@@ -9,27 +9,37 @@ import {
 
 export function NavProjects({
 	projectMenu,
-	shouldDisplay,
+	routeData,
 }: {
 	projectMenu: {
 		name: string;
 		url: string;
 		icon: LucideIcon;
 	}[];
-	shouldDisplay: boolean;
+	routeData:
+		| false
+		| {
+				projectId: string;
+				"**"?: string;
+		  };
 }) {
 	// we're not on the route that is project specific, don't show the project nav
-	if (!shouldDisplay) {
+	if (!routeData || !routeData?.projectId) {
 		return null;
 	}
+
+	const isActive = (url: string) =>
+		(!routeData["**"] && !url) || routeData["**"] === url;
 
 	return (
 		<SidebarGroup className="group/collapsible">
 			<SidebarMenu>
 				{projectMenu.map((item) => (
 					<SidebarMenuItem key={item.name}>
-						<SidebarMenuButton asChild>
-							<Link to={item.url}>
+						<SidebarMenuButton asChild isActive={isActive(item.url)}>
+							<Link
+								to={`/project/${routeData?.projectId}/${item.url}` as string}
+							>
 								<item.icon />
 								<span>{item.name}</span>
 							</Link>

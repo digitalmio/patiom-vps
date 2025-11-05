@@ -24,12 +24,11 @@ export function ProjectSwitcher({
 	activeProject: string | null;
 }) {
 	const { isMobile } = useSidebar();
-
-	// check if current route contains projectId param
-	const activeProjectData = activeProject
-		? projects.find((p) => p.id === activeProject)
-		: null;
 	const navigate = useNavigate();
+
+	const activeProjectData =
+		(activeProject && projects.find((p) => p.id === activeProject)) ||
+		projects[0];
 
 	if (!activeProjectData) {
 		return null;

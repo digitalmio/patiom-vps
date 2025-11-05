@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
 	BadgeCheck,
 	Bell,
@@ -36,7 +36,7 @@ export function NavUser({
 	};
 }) {
 	const { isMobile } = useSidebar();
-	const router = useRouter();
+	const navigate = useNavigate();
 	const nameFallback = user.name
 		.split(" ")
 		.map((n) => n[0])
@@ -109,7 +109,7 @@ export function NavUser({
 						<DropdownMenuItem
 							onClick={async () => {
 								await authClient.signOut();
-								router.navigate({ to: "/auth" });
+								navigate({ to: "/auth" });
 							}}
 						>
 							<LogOut />

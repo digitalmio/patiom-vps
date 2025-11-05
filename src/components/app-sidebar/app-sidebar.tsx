@@ -1,3 +1,4 @@
+import { useMatchRoute } from "@tanstack/react-router";
 import {
 	Activity,
 	AlertCircle,
@@ -9,7 +10,6 @@ import {
 	Plus,
 	Settings,
 } from "lucide-react";
-import { useMatchRoute } from "node_modules/@tanstack/react-router/dist/esm/Matches";
 import type * as React from "react";
 import { NavProjects } from "@/components/app-sidebar/nav-projects";
 import { NavSecondary } from "@/components/app-sidebar/nav-secondary";
@@ -29,27 +29,27 @@ const data = {
 	projectMenu: [
 		{
 			name: "Overview",
-			url: "#",
+			url: "",
 			icon: LayoutDashboard,
 		},
 		{
 			name: "Operations",
-			url: "#",
+			url: "operations",
 			icon: Activity,
 		},
 		{
 			name: "Fields",
-			url: "#",
+			url: "fields",
 			icon: Grid3x3,
 		},
 		{
 			name: "Types",
-			url: "#",
+			url: "types",
 			icon: Boxes,
 		},
 		{
 			name: "Errors",
-			url: "#",
+			url: "errors",
 			icon: AlertCircle,
 		},
 	],
@@ -101,7 +101,7 @@ export function AppSidebar({
 			</SidebarHeader>
 			<SidebarContent>
 				<NavProjects
-					shouldDisplay={!!routeProjectId}
+					routeData={routeProjectId || false}
 					projectMenu={data.projectMenu}
 				/>
 				<NavSecondary links={data.mainNav} />
