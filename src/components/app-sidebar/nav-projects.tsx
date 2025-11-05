@@ -9,13 +9,20 @@ import {
 
 export function NavProjects({
 	projectMenu,
+	shouldDisplay,
 }: {
 	projectMenu: {
 		name: string;
 		url: string;
 		icon: LucideIcon;
 	}[];
+	shouldDisplay: boolean;
 }) {
+	// we're not on the route that is project specific, don't show the project nav
+	if (!shouldDisplay) {
+		return null;
+	}
+
 	return (
 		<SidebarGroup className="group/collapsible">
 			<SidebarMenu>

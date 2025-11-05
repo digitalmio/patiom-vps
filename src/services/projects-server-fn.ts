@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { db, desc, eq, schema } from "@/lib/db";
+import { db, eq, schema } from "@/lib/db";
 import { authMiddleware } from "./auth-middleware";
 
 export const getUserProjects = createServerFn({ method: "GET" })
@@ -14,7 +14,7 @@ export const getUserProjects = createServerFn({ method: "GET" })
 			.select()
 			.from(schema.projects)
 			.where(eq(schema.projects.userId, user.id))
-			.orderBy(desc(schema.projects.createdAt));
+			.orderBy(schema.projects.name);
 
 		return projects;
 	});

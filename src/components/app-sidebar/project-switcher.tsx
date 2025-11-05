@@ -1,6 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDown, Layers, Plus } from "lucide-react";
-import * as React from "react";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,13 +18,20 @@ import type { schema } from "@/lib/db";
 
 export function ProjectSwitcher({
 	projects,
+	activeProject,
 }: {
 	projects: (typeof schema.projects.$inferSelect)[];
+	activeProject: string | null;
 }) {
 	const { isMobile } = useSidebar();
-	const [activeProject, setActiveProject] = React.useState(projects[0]);
 
-	if (!activeProject) {
+	// check if current route contains projectId param
+	const activeProjectData = activeProject
+		? projects.find((p) => p.id === activeProject)
+		: null;
+	const navigate = useNavigate();
+
+	if (!activeProjectData) {
 		return null;
 	}
 
@@ -43,10 +49,10 @@ export function ProjectSwitcher({
 							</div>
 							<div className="grid flex-1 text-left text-sm leading-tight">
 								<span className="truncate font-medium">
-									{activeProject.name}
+									{activeProjectData.name}
 								</span>
 								<span className="truncate text-xs">
-									{activeProject.description}
+									{activeProjectData.description}
 								</span>
 							</div>
 							<ChevronsUpDown className="ml-auto" />
@@ -65,7 +71,7 @@ export function ProjectSwitcher({
 							return (
 								<DropdownMenuItem
 									key={project.name}
-									onClick={() => setActiveProject(project)}
+									onClick={() => navigate({ to: `/project/${project.id}/` })}
 									className="gap-2 p-2"
 								>
 									<div className="flex size-6 items-center justify-center rounded-md border">

@@ -9,6 +9,7 @@ import {
 	Plus,
 	Settings,
 } from "lucide-react";
+import { useMatchRoute } from "node_modules/@tanstack/react-router/dist/esm/Matches";
 import type * as React from "react";
 import { NavProjects } from "@/components/app-sidebar/nav-projects";
 import { NavSecondary } from "@/components/app-sidebar/nav-secondary";
@@ -84,16 +85,25 @@ export function AppSidebar({
 	userData: { name: string; email: string; image?: string };
 	projects: Array<typeof schema.projects.$inferSelect>;
 }) {
+	const matchRoute = useMatchRoute();
+	const routeProjectId = matchRoute({ to: "/project/$projectId", fuzzy: true });
+
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader className="border-b">
 				<Logo />
 			</SidebarHeader>
 			<SidebarHeader>
-				<ProjectSwitcher projects={projects} />
+				<ProjectSwitcher
+					projects={projects}
+					activeProject={routeProjectId ? routeProjectId.projectId : null}
+				/>
 			</SidebarHeader>
 			<SidebarContent>
-				<NavProjects projectMenu={data.projectMenu} />
+				<NavProjects
+					shouldDisplay={!!routeProjectId}
+					projectMenu={data.projectMenu}
+				/>
 				<NavSecondary links={data.mainNav} />
 			</SidebarContent>
 			<SidebarFooter>

@@ -23,9 +23,13 @@ import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
+import { Route as AppProjectProjectIdIndexRouteImport } from './routes/_app/project.$projectId/index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
 import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ssr.data-only'
+import { Route as AppProjectProjectIdTypesRouteImport } from './routes/_app/project.$projectId/types'
+import { Route as AppProjectProjectIdOperationsRouteImport } from './routes/_app/project.$projectId/operations'
+import { Route as AppProjectProjectIdFieldsRouteImport } from './routes/_app/project.$projectId/fields'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -96,6 +100,12 @@ const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   path: '/demo/start/ssr/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppProjectProjectIdIndexRoute =
+  AppProjectProjectIdIndexRouteImport.update({
+    id: '/project/$projectId/',
+    path: '/project/$projectId/',
+    getParentRoute: () => AppRoute,
+  } as any)
 const DemoStartSsrSpaModeRoute = DemoStartSsrSpaModeRouteImport.update({
   id: '/demo/start/ssr/spa-mode',
   path: '/demo/start/ssr/spa-mode',
@@ -111,6 +121,24 @@ const DemoStartSsrDataOnlyRoute = DemoStartSsrDataOnlyRouteImport.update({
   path: '/demo/start/ssr/data-only',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppProjectProjectIdTypesRoute =
+  AppProjectProjectIdTypesRouteImport.update({
+    id: '/project/$projectId/types',
+    path: '/project/$projectId/types',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppProjectProjectIdOperationsRoute =
+  AppProjectProjectIdOperationsRouteImport.update({
+    id: '/project/$projectId/operations',
+    path: '/project/$projectId/operations',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppProjectProjectIdFieldsRoute =
+  AppProjectProjectIdFieldsRouteImport.update({
+    id: '/project/$projectId/fields',
+    path: '/project/$projectId/fields',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
@@ -125,9 +153,13 @@ export interface FileRoutesByFullPath {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/project/$projectId/fields': typeof AppProjectProjectIdFieldsRoute
+  '/project/$projectId/operations': typeof AppProjectProjectIdOperationsRoute
+  '/project/$projectId/types': typeof AppProjectProjectIdTypesRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
+  '/project/$projectId': typeof AppProjectProjectIdIndexRoute
   '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
@@ -143,9 +175,13 @@ export interface FileRoutesByTo {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/project/$projectId/fields': typeof AppProjectProjectIdFieldsRoute
+  '/project/$projectId/operations': typeof AppProjectProjectIdOperationsRoute
+  '/project/$projectId/types': typeof AppProjectProjectIdTypesRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
+  '/project/$projectId': typeof AppProjectProjectIdIndexRoute
   '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesById {
@@ -163,9 +199,13 @@ export interface FileRoutesById {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/_app/project/$projectId/fields': typeof AppProjectProjectIdFieldsRoute
+  '/_app/project/$projectId/operations': typeof AppProjectProjectIdOperationsRoute
+  '/_app/project/$projectId/types': typeof AppProjectProjectIdTypesRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
+  '/_app/project/$projectId/': typeof AppProjectProjectIdIndexRoute
   '/demo/start/ssr/': typeof DemoStartSsrIndexRoute
 }
 export interface FileRouteTypes {
@@ -183,9 +223,13 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/project/$projectId/fields'
+    | '/project/$projectId/operations'
+    | '/project/$projectId/types'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
+    | '/project/$projectId'
     | '/demo/start/ssr'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -201,9 +245,13 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/project/$projectId/fields'
+    | '/project/$projectId/operations'
+    | '/project/$projectId/types'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
+    | '/project/$projectId'
     | '/demo/start/ssr'
   id:
     | '__root__'
@@ -220,9 +268,13 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/_app/project/$projectId/fields'
+    | '/_app/project/$projectId/operations'
+    | '/_app/project/$projectId/types'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
+    | '/_app/project/$projectId/'
     | '/demo/start/ssr/'
   fileRoutesById: FileRoutesById
 }
@@ -344,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStartSsrIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/project/$projectId/': {
+      id: '/_app/project/$projectId/'
+      path: '/project/$projectId'
+      fullPath: '/project/$projectId'
+      preLoaderRoute: typeof AppProjectProjectIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/demo/start/ssr/spa-mode': {
       id: '/demo/start/ssr/spa-mode'
       path: '/demo/start/ssr/spa-mode'
@@ -365,17 +424,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoStartSsrDataOnlyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/project/$projectId/types': {
+      id: '/_app/project/$projectId/types'
+      path: '/project/$projectId/types'
+      fullPath: '/project/$projectId/types'
+      preLoaderRoute: typeof AppProjectProjectIdTypesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/project/$projectId/operations': {
+      id: '/_app/project/$projectId/operations'
+      path: '/project/$projectId/operations'
+      fullPath: '/project/$projectId/operations'
+      preLoaderRoute: typeof AppProjectProjectIdOperationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/project/$projectId/fields': {
+      id: '/_app/project/$projectId/fields'
+      path: '/project/$projectId/fields'
+      fullPath: '/project/$projectId/fields'
+      preLoaderRoute: typeof AppProjectProjectIdFieldsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppTestRoute: typeof AppTestRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppProjectProjectIdFieldsRoute: typeof AppProjectProjectIdFieldsRoute
+  AppProjectProjectIdOperationsRoute: typeof AppProjectProjectIdOperationsRoute
+  AppProjectProjectIdTypesRoute: typeof AppProjectProjectIdTypesRoute
+  AppProjectProjectIdIndexRoute: typeof AppProjectProjectIdIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppTestRoute: AppTestRoute,
   AppIndexRoute: AppIndexRoute,
+  AppProjectProjectIdFieldsRoute: AppProjectProjectIdFieldsRoute,
+  AppProjectProjectIdOperationsRoute: AppProjectProjectIdOperationsRoute,
+  AppProjectProjectIdTypesRoute: AppProjectProjectIdTypesRoute,
+  AppProjectProjectIdIndexRoute: AppProjectProjectIdIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
