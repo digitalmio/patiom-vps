@@ -34,3 +34,17 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
 		},
 	});
 });
+
+export const isAuthenticatedMiddleware = createMiddleware()
+	.middleware([authMiddleware])
+	.server(async ({ context, next }) => {
+		if (!context.user?.id) {
+			throw new Error("User is not authenticated");
+		}
+
+		return await next({
+			context: {
+				user: context.user,
+			},
+		});
+	});

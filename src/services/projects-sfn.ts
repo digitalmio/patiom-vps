@@ -1,14 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db, eq, schema } from "@/lib/db";
-import { authMiddleware } from "./auth-middleware";
+import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const getUserProjects = createServerFn({ method: "GET" })
-	.middleware([authMiddleware])
+	.middleware([isAuthenticatedMiddleware])
 	.handler(async ({ context }) => {
 		const { user } = context;
-		if (!user?.id) {
-			return [];
-		}
 
 		const projects = await db
 			.select()

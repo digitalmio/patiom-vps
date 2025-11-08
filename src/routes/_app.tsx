@@ -7,8 +7,8 @@ import {
 import { AppSidebar } from "@/components/app-sidebar/app-sidebar";
 import { Header } from "@/components/app-sidebar/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { getUserData } from "@/services/auth-server-fn";
-import { getUserProjects } from "@/services/projects-server-fn";
+import { getUserData } from "@/services/auth-sfn";
+import { getUserProjects } from "@/services/projects-sfn";
 
 export const Route = createFileRoute("/_app")({
 	component: RouteComponent,

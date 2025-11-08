@@ -22,6 +22,7 @@ import { Route as DemoFormAddressRouteImport } from './routes/demo/form.address'
 import { Route as DemoApiTqTodosRouteImport } from './routes/demo/api.tq-todos'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as AppProjectProjectIdRouteImport } from './routes/_app/project.$projectId'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
 import { Route as AppProjectProjectIdIndexRouteImport } from './routes/_app/project.$projectId/index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
@@ -96,6 +97,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppProjectProjectIdRoute = AppProjectProjectIdRouteImport.update({
+  id: '/project/$projectId',
+  path: '/project/$projectId',
+  getParentRoute: () => AppRoute,
+} as any)
 const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   id: '/demo/start/ssr/',
   path: '/demo/start/ssr/',
@@ -103,9 +109,9 @@ const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
 } as any)
 const AppProjectProjectIdIndexRoute =
   AppProjectProjectIdIndexRouteImport.update({
-    id: '/project/$projectId/',
-    path: '/project/$projectId/',
-    getParentRoute: () => AppRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppProjectProjectIdRoute,
   } as any)
 const DemoStartSsrSpaModeRoute = DemoStartSsrSpaModeRouteImport.update({
   id: '/demo/start/ssr/spa-mode',
@@ -124,27 +130,27 @@ const DemoStartSsrDataOnlyRoute = DemoStartSsrDataOnlyRouteImport.update({
 } as any)
 const AppProjectProjectIdTypesRoute =
   AppProjectProjectIdTypesRouteImport.update({
-    id: '/project/$projectId/types',
-    path: '/project/$projectId/types',
-    getParentRoute: () => AppRoute,
+    id: '/types',
+    path: '/types',
+    getParentRoute: () => AppProjectProjectIdRoute,
   } as any)
 const AppProjectProjectIdOperationsRoute =
   AppProjectProjectIdOperationsRouteImport.update({
-    id: '/project/$projectId/operations',
-    path: '/project/$projectId/operations',
-    getParentRoute: () => AppRoute,
+    id: '/operations',
+    path: '/operations',
+    getParentRoute: () => AppProjectProjectIdRoute,
   } as any)
 const AppProjectProjectIdFieldsRoute =
   AppProjectProjectIdFieldsRouteImport.update({
-    id: '/project/$projectId/fields',
-    path: '/project/$projectId/fields',
-    getParentRoute: () => AppRoute,
+    id: '/fields',
+    path: '/fields',
+    getParentRoute: () => AppProjectProjectIdRoute,
   } as any)
 const AppProjectProjectIdErrorsRoute =
   AppProjectProjectIdErrorsRouteImport.update({
-    id: '/project/$projectId/errors',
-    path: '/project/$projectId/errors',
-    getParentRoute: () => AppRoute,
+    id: '/errors',
+    path: '/errors',
+    getParentRoute: () => AppProjectProjectIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/': typeof AppIndexRoute
+  '/project/$projectId': typeof AppProjectProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
@@ -167,7 +174,7 @@ export interface FileRoutesByFullPath {
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
-  '/project/$projectId': typeof AppProjectProjectIdIndexRoute
+  '/project/$projectId/': typeof AppProjectProjectIdIndexRoute
   '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
@@ -201,6 +208,7 @@ export interface FileRoutesById {
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/project/$projectId': typeof AppProjectProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/api/tq-todos': typeof DemoApiTqTodosRoute
@@ -226,6 +234,7 @@ export interface FileRouteTypes {
     | '/demo/table'
     | '/demo/tanstack-query'
     | '/'
+    | '/project/$projectId'
     | '/api/auth/$'
     | '/demo/api/names'
     | '/demo/api/tq-todos'
@@ -240,7 +249,7 @@ export interface FileRouteTypes {
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
-    | '/project/$projectId'
+    | '/project/$projectId/'
     | '/demo/start/ssr'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/demo/table'
     | '/demo/tanstack-query'
     | '/_app/'
+    | '/_app/project/$projectId'
     | '/api/auth/$'
     | '/demo/api/names'
     | '/demo/api/tq-todos'
@@ -402,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/project/$projectId': {
+      id: '/_app/project/$projectId'
+      path: '/project/$projectId'
+      fullPath: '/project/$projectId'
+      preLoaderRoute: typeof AppProjectProjectIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
@@ -411,10 +428,10 @@ declare module '@tanstack/react-router' {
     }
     '/_app/project/$projectId/': {
       id: '/_app/project/$projectId/'
-      path: '/project/$projectId'
-      fullPath: '/project/$projectId'
+      path: '/'
+      fullPath: '/project/$projectId/'
       preLoaderRoute: typeof AppProjectProjectIdIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppProjectProjectIdRoute
     }
     '/demo/start/ssr/spa-mode': {
       id: '/demo/start/ssr/spa-mode'
@@ -439,38 +456,36 @@ declare module '@tanstack/react-router' {
     }
     '/_app/project/$projectId/types': {
       id: '/_app/project/$projectId/types'
-      path: '/project/$projectId/types'
+      path: '/types'
       fullPath: '/project/$projectId/types'
       preLoaderRoute: typeof AppProjectProjectIdTypesRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppProjectProjectIdRoute
     }
     '/_app/project/$projectId/operations': {
       id: '/_app/project/$projectId/operations'
-      path: '/project/$projectId/operations'
+      path: '/operations'
       fullPath: '/project/$projectId/operations'
       preLoaderRoute: typeof AppProjectProjectIdOperationsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppProjectProjectIdRoute
     }
     '/_app/project/$projectId/fields': {
       id: '/_app/project/$projectId/fields'
-      path: '/project/$projectId/fields'
+      path: '/fields'
       fullPath: '/project/$projectId/fields'
       preLoaderRoute: typeof AppProjectProjectIdFieldsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppProjectProjectIdRoute
     }
     '/_app/project/$projectId/errors': {
       id: '/_app/project/$projectId/errors'
-      path: '/project/$projectId/errors'
+      path: '/errors'
       fullPath: '/project/$projectId/errors'
       preLoaderRoute: typeof AppProjectProjectIdErrorsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppProjectProjectIdRoute
     }
   }
 }
 
-interface AppRouteChildren {
-  AppTestRoute: typeof AppTestRoute
-  AppIndexRoute: typeof AppIndexRoute
+interface AppProjectProjectIdRouteChildren {
   AppProjectProjectIdErrorsRoute: typeof AppProjectProjectIdErrorsRoute
   AppProjectProjectIdFieldsRoute: typeof AppProjectProjectIdFieldsRoute
   AppProjectProjectIdOperationsRoute: typeof AppProjectProjectIdOperationsRoute
@@ -478,14 +493,27 @@ interface AppRouteChildren {
   AppProjectProjectIdIndexRoute: typeof AppProjectProjectIdIndexRoute
 }
 
-const AppRouteChildren: AppRouteChildren = {
-  AppTestRoute: AppTestRoute,
-  AppIndexRoute: AppIndexRoute,
+const AppProjectProjectIdRouteChildren: AppProjectProjectIdRouteChildren = {
   AppProjectProjectIdErrorsRoute: AppProjectProjectIdErrorsRoute,
   AppProjectProjectIdFieldsRoute: AppProjectProjectIdFieldsRoute,
   AppProjectProjectIdOperationsRoute: AppProjectProjectIdOperationsRoute,
   AppProjectProjectIdTypesRoute: AppProjectProjectIdTypesRoute,
   AppProjectProjectIdIndexRoute: AppProjectProjectIdIndexRoute,
+}
+
+const AppProjectProjectIdRouteWithChildren =
+  AppProjectProjectIdRoute._addFileChildren(AppProjectProjectIdRouteChildren)
+
+interface AppRouteChildren {
+  AppTestRoute: typeof AppTestRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppProjectProjectIdRoute: typeof AppProjectProjectIdRouteWithChildren
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppTestRoute: AppTestRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppProjectProjectIdRoute: AppProjectProjectIdRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
