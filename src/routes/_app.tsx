@@ -43,7 +43,7 @@ function RouteComponent() {
 			<AppSidebar userData={userData} projects={projects} />
 			<SidebarInset>
 				<Header title={title} />
-				<div className="p-4">
+				<div className="px-5">
 					<Outlet />
 				</div>
 			</SidebarInset>
