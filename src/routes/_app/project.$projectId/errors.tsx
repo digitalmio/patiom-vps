@@ -17,5 +17,6 @@ export const Route = createFileRoute("/_app/project/$projectId/errors")({
 });
 
 function RouteComponent() {
-	return <div>Hello "/_app/project/$projectId/errors"!</div>;
+	const { errors } = Route.useLoaderData();
+	return <pre>{JSON.stringify(errors, null, 2)}</pre>;
 }
