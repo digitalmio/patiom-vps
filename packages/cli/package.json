@@ -1,0 +1,33 @@
+{
+  "name": "@patiom/cli",
+  "version": "0.1.0",
+  "description": "Patiom CLI - deploy Node.js backends to bare metal",
+  "bin": {
+    "patiom": "./dist/index.mjs"
+  },
+  "files": ["dist"],
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsdown"
+  },
+  "dependencies": {
+    "@patiom/shared": "workspace:*",
+    "archiver": "^7.0.1",
+    "cac": "^7.0.0",
+    "consola": "^3.4.2",
+    "package-manager-detector": "^1.6.0",
+    "write-package": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^25.9.1",
+    "tsdown": "^0.12.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "ISC"
+}

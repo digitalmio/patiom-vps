@@ -1,0 +1,16 @@
+{
+  "name": "patiom",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "oxlint packages/*/src",
+    "lint:fix": "oxlint --fix packages/*/src",
+    "fmt": "oxfmt --write packages/*/src",
+    "fmt:check": "oxfmt --check packages/*/src"
+  },
+  "devDependencies": {
+    "oxlint": "^1.68.0",
+    "oxfmt": "^0.53.0"
+  },
+  "license": "ISC"
+}
