@@ -1,47 +1,50 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import archiver from "archiver";
 import { PassThrough } from "node:stream";
+import archiver from "archiver";
 import { glob } from "glob";
 
 type ArchiveOptions = {
-  cwd: string;
-  include: string[];
+	cwd: string;
+	include: string[];
 };
 
-export const archive = async ({ cwd, include }: ArchiveOptions): Promise<Buffer> => {
-  let hasLockfile = false;
-  try {
-    await fs.access(path.join(cwd, "pnpm-lock.yaml"));
-    hasLockfile = true;
-  } catch {
-    // no lockfile
-  }
+export const archive = async ({
+	cwd,
+	include,
+}: ArchiveOptions): Promise<Buffer> => {
+	let hasLockfile = false;
+	try {
+		await fs.access(path.join(cwd, "pnpm-lock.yaml"));
+		hasLockfile = true;
+	} catch {
+		// no lockfile
+	}
 
-  const files = await glob(include, { cwd, nodir: true });
+	const files = await glob(include, { cwd, nodir: true });
 
-  return new Promise<Buffer>((resolve, reject) => {
-    const zip = archiver("zip", { zlib: { level: 9 } });
-    const passThrough = new PassThrough();
-    const chunks: Buffer[] = [];
+	return new Promise<Buffer>((resolve, reject) => {
+		const zip = archiver("zip", { zlib: { level: 9 } });
+		const passThrough = new PassThrough();
+		const chunks: Buffer[] = [];
 
-    passThrough.on("data", (chunk: Buffer) => chunks.push(chunk));
-    passThrough.on("end", () => resolve(Buffer.concat(chunks)));
-    passThrough.on("error", reject);
+		passThrough.on("data", (chunk: Buffer) => chunks.push(chunk));
+		passThrough.on("end", () => resolve(Buffer.concat(chunks)));
+		passThrough.on("error", reject);
 
-    zip.pipe(passThrough);
+		zip.pipe(passThrough);
 
-    zip.file(path.join(cwd, "package.json"), { name: "package.json" });
+		zip.file(path.join(cwd, "package.json"), { name: "package.json" });
 
-    if (hasLockfile) {
-      zip.file(path.join(cwd, "pnpm-lock.yaml"), { name: "pnpm-lock.yaml" });
-    }
+		if (hasLockfile) {
+			zip.file(path.join(cwd, "pnpm-lock.yaml"), { name: "pnpm-lock.yaml" });
+		}
 
-    for (const file of files) {
-      zip.file(path.join(cwd, file), { name: file });
-    }
+		for (const file of files) {
+			zip.file(path.join(cwd, file), { name: file });
+		}
 
-    zip.on("error", reject);
-    zip.finalize();
-  });
+		zip.on("error", reject);
+		zip.finalize();
+	});
 };

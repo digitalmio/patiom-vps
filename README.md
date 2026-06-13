@@ -257,6 +257,8 @@ You'll be prompted for your daemon URL and auth token. Credentials are saved to 
 - **`patiom rollback`** — swap to the previous release in one command.
 - **`patiom logs`** — stream app logs from `journalctl` to your terminal.
 - **`instances: "maxcpu"`** — automatically scale to all available CPU cores.
+- **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Staging instances run on separate ports with unique subdomains (`{name}-{nanoid}.{ip}.patiom.run`). Promote to live when ready.
+- **Multi-server support** — deploy to different servers from one config. `~/.patiom/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
 
 ## Monorepo structure
 

@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",
+    "@inquirer/prompts": "^7.8.2",
     "@patiom/shared": "workspace:*",
+    "consola": "^3.4.2",
     "dotenv": "^16.4.7",
     "execa": "^9.6.1",
     "hono": "^4.12.23",
