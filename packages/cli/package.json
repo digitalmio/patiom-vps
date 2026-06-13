@@ -16,6 +16,7 @@
     "archiver": "^7.0.1",
     "cac": "^7.0.0",
     "consola": "^3.4.2",
+    "glob": "^13.0.6",
     "package-manager-detector": "^1.6.0",
     "write-package": "^7.2.0"
   },

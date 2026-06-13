@@ -2,71 +2,46 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import archiver from "archiver";
 import { PassThrough } from "node:stream";
-
-const LOCKFILES = ["pnpm-lock.yaml", "package-lock.json", "yarn.lock"];
+import { glob } from "glob";
 
 type ArchiveOptions = {
-	cwd: string;
-	include: string[];
+  cwd: string;
+  include: string[];
 };
 
 export const archive = async ({ cwd, include }: ArchiveOptions): Promise<Buffer> => {
-	let lockfileName: string | null = null;
-	for (const candidate of LOCKFILES) {
-		try {
-			await fs.access(path.join(cwd, candidate));
-			lockfileName = candidate;
-			break;
-		} catch {
-			// not found, try next
-		}
-	}
+  let hasLockfile = false;
+  try {
+    await fs.access(path.join(cwd, "pnpm-lock.yaml"));
+    hasLockfile = true;
+  } catch {
+    // no lockfile
+  }
 
-	const addToDir: { path: string; name: string }[] = [];
-	const addToFile: { path: string; name: string }[] = [];
+  const files = await glob(include, { cwd, nodir: true });
 
-	for (const item of include) {
-		const itemPath = path.join(cwd, item);
-		let stats;
-		try {
-			stats = await fs.stat(itemPath);
-		} catch {
-			console.warn(`Include path not found, skipping: ${item}`);
-			continue;
-		}
-		if (stats.isDirectory()) {
-			addToDir.push({ path: itemPath, name: item });
-		} else {
-			addToFile.push({ path: itemPath, name: item });
-		}
-	}
+  return new Promise<Buffer>((resolve, reject) => {
+    const zip = archiver("zip", { zlib: { level: 9 } });
+    const passThrough = new PassThrough();
+    const chunks: Buffer[] = [];
 
-	return new Promise<Buffer>((resolve, reject) => {
-		const zip = archiver("zip", { zlib: { level: 9 } });
-		const passThrough = new PassThrough();
-		const chunks: Buffer[] = [];
+    passThrough.on("data", (chunk: Buffer) => chunks.push(chunk));
+    passThrough.on("end", () => resolve(Buffer.concat(chunks)));
+    passThrough.on("error", reject);
 
-		passThrough.on("data", (chunk: Buffer) => chunks.push(chunk));
-		passThrough.on("end", () => resolve(Buffer.concat(chunks)));
-		passThrough.on("error", reject);
+    zip.pipe(passThrough);
 
-		zip.pipe(passThrough);
+    zip.file(path.join(cwd, "package.json"), { name: "package.json" });
 
-		zip.file(path.join(cwd, "package.json"), { name: "package.json" });
+    if (hasLockfile) {
+      zip.file(path.join(cwd, "pnpm-lock.yaml"), { name: "pnpm-lock.yaml" });
+    }
 
-		if (lockfileName) {
-			zip.file(path.join(cwd, lockfileName), { name: lockfileName });
-		}
+    for (const file of files) {
+      zip.file(path.join(cwd, file), { name: file });
+    }
 
-		for (const d of addToDir) {
-			zip.directory(d.path, d.name);
-		}
-
-		for (const f of addToFile) {
-			zip.file(f.path, { name: f.name });
-		}
-
-		zip.on("error", reject);
-		zip.finalize();
-	});
+    zip.on("error", reject);
+    zip.finalize();
+  });
 };
