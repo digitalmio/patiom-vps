@@ -17,7 +17,8 @@
     "execa": "^9.6.1",
     "get-port": "^7.2.0",
     "hono": "^4.12.23",
-    "smol-toml": "^1.6.1"
+    "smol-toml": "^1.6.1",
+    "ulid": "^3.0.2"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",

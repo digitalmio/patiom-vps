@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import AdmZip from "adm-zip";
+import { ulid } from "ulid";
 import { APPS_DIR } from "../config";
 
 export type Logger = (msg: string) => void;
@@ -28,7 +29,7 @@ export const getCurrentSymlink = (appName: string): string => {
 };
 
 const generateReleaseId = (): string => {
-  return Date.now().toString();
+  return ulid();
 };
 
 export const extractArchive = async (

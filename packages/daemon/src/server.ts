@@ -6,6 +6,7 @@ import { healthRoute } from "./routes/health";
 import { envRoute } from "./routes/env";
 import { dbRoute } from "./routes/db";
 import { appsRoute } from "./routes/apps";
+import { logsRoute } from "./routes/logs";
 
 const app = new Hono();
 
@@ -16,6 +17,7 @@ app.route("/deploy", deployRoute);
 app.route("/env", envRoute);
 app.route("/db", dbRoute);
 app.route("/apps", appsRoute);
+app.route("/logs", logsRoute);
 
 serve({
   fetch: app.fetch,

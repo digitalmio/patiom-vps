@@ -58,8 +58,23 @@ const runBuild = async (cwd: string, pkg: { scripts?: Record<string, string> }) 
 	consola.success("Build complete.");
 };
 
+type DeployResponse = {
+  releaseId: string;
+};
+
+type LogsResponse = {
+  lines: string[];
+  nextOffset: number;
+  done: boolean;
+};
+
+type StatusResponse = {
+  status: "running" | "complete" | "failed";
+};
+
 const upload = async (globalConfig: GlobalConfig, name: string, zipBuffer: Buffer, patiom: PatiomConfig) => {
   consola.start("Deploying to server...");
+  console.log("");
 
   const formData = new FormData();
   const blob = new Blob([new Uint8Array(zipBuffer)]);
@@ -72,30 +87,77 @@ const upload = async (globalConfig: GlobalConfig, name: string, zipBuffer: Buffe
   formData.append("dbFolder", patiom.dbFolder ?? "db");
   formData.append("storageFolder", patiom.storageFolder ?? "storage");
 
-	const response = await fetch(`${globalConfig.url}/deploy`, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${globalConfig.token}`,
-		},
-		body: formData,
-	});
+  const response = await fetch(`${globalConfig.url}/deploy`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${globalConfig.token}`,
+    },
+    body: formData,
+  });
 
-	if (!response.ok) {
-		consola.error(`Deployment failed: ${response.status} ${response.statusText}`);
-		const body = await response.text();
-		if (body) consola.error(body);
-		process.exit(1);
-	}
+  if (!response.ok) {
+    consola.error(`Deployment failed: ${response.status} ${response.statusText}`);
+    const body = await response.text();
+    if (body) consola.error(body);
+    process.exit(1);
+  }
 
-	if (response.body) {
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder();
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			process.stdout.write(decoder.decode(value));
-		}
-	}
+  const { releaseId } = (await response.json()) as DeployResponse;
+
+  let offset = 0;
+  let status: "running" | "complete" | "failed" = "running";
+
+  while (status === "running") {
+    const logsResponse = await fetch(
+      `${globalConfig.url}/logs/${name}/${releaseId}?offset=${offset}`,
+      {
+        headers: { Authorization: `Bearer ${globalConfig.token}` },
+      }
+    );
+
+    if (logsResponse.ok) {
+      const { lines, nextOffset } = (await logsResponse.json()) as LogsResponse;
+      lines.map((line) => console.log(`  ${line}`));
+      offset = nextOffset;
+    }
+
+    const statusResponse = await fetch(
+      `${globalConfig.url}/deploy/${name}/${releaseId}/status`,
+      {
+        headers: { Authorization: `Bearer ${globalConfig.token}` },
+      }
+    );
+
+    if (statusResponse.ok) {
+      const { status: newStatus } = (await statusResponse.json()) as StatusResponse;
+      status = newStatus;
+    }
+
+    if (status === "running") {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 500);
+      });
+    }
+  }
+
+  const finalLogsResponse = await fetch(
+    `${globalConfig.url}/logs/${name}/${releaseId}?offset=${offset}`,
+    {
+      headers: { Authorization: `Bearer ${globalConfig.token}` },
+    }
+  );
+
+  if (finalLogsResponse.ok) {
+    const { lines } = (await finalLogsResponse.json()) as LogsResponse;
+    lines.map((line) => console.log(`  ${line}`));
+  }
+
+  console.log("");
+
+  if (status === "failed") {
+    consola.error("Deployment failed");
+    process.exit(1);
+  }
 };
 
 export const deployCommand = async (options: DeployOptions) => {

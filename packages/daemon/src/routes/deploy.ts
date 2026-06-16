@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Hono } from "hono";
+import { ulid } from "ulid";
 import {
-  extractArchive,
   createSymlinks,
   swapCurrentSymlink,
   getReleasesDir,
@@ -15,10 +15,37 @@ import { ensureEnvFile } from "../core/env";
 import { ensureStorageDir } from "../core/storage";
 import { appServiceTemplate } from "../templates/systemd";
 import { PATIOM_ROOT } from "../config";
+import { writeLog } from "../core/logs";
 
 export const deployRoute = new Hono();
 
 const UNIT_FILE_PATH = "/etc/systemd/system";
+
+type DeployStatus = "running" | "complete" | "failed";
+
+const getStatusPath = (appName: string, releaseId: string): string => {
+  return path.join(getReleasesDir(appName), releaseId, "status");
+};
+
+const writeStatus = async (
+  appName: string,
+  releaseId: string,
+  status: DeployStatus
+): Promise<void> => {
+  await fs.writeFile(getStatusPath(appName, releaseId), status);
+};
+
+export const readStatus = async (
+  appName: string,
+  releaseId: string
+): Promise<DeployStatus | null> => {
+  try {
+    const content = await fs.readFile(getStatusPath(appName, releaseId), "utf-8");
+    return content.trim() as DeployStatus;
+  } catch {
+    return null;
+  }
+};
 
 const getStartScript = async (releaseDir: string): Promise<string> => {
   const pkgPath = path.join(releaseDir, "package.json");
@@ -126,48 +153,50 @@ const parseDeployRequest = (formData: FormData) => {
 
 const executeDeploy = async (
   name: string,
-  zipFile: File,
+  releaseId: string,
+  zipBuffer: Buffer,
   domains: string[],
   sslipDomain: boolean,
   instances: number,
   dbFolder: string,
-  storageFolder: string,
-  log: (msg: string) => void
+  storageFolder: string
 ) => {
-  log(`Starting deployment for ${name}...`);
+  const log = (msg: string) => writeLog(name, releaseId, msg);
 
-  const zipBuffer = Buffer.from(await zipFile.arrayBuffer());
+  await log(`Starting deployment for ${name}...`);
 
-  log("Extracting archive...");
-  const releaseId = await extractArchive(name, zipBuffer, log);
+  await log("Extracting archive...");
   const releaseDir = path.join(getReleasesDir(name), releaseId);
+  const AdmZip = (await import("adm-zip")).default;
+  const zip = new AdmZip(zipBuffer);
+  zip.extractAllTo(releaseDir, true);
 
-  log("Creating symlinks...");
+  await log("Creating symlinks...");
   await createSymlinks(name, releaseId, dbFolder, storageFolder, log);
 
-  log("Ensuring .env file exists...");
+  await log("Ensuring .env file exists...");
   await ensureEnvFile(name, log);
 
-  log("Ensuring storage directory exists...");
+  await log("Ensuring storage directory exists...");
   await ensureStorageDir(name, storageFolder, log);
 
-  log("Installing dependencies...");
+  await log("Installing dependencies...");
   await install(releaseDir, log);
 
-  log("Detecting start script...");
+  await log("Detecting start script...");
   const startScript = await getStartScript(releaseDir);
-  log(`Using start script: ${startScript}`);
+  await log(`Using start script: ${startScript}`);
 
-  log("Writing systemd unit file...");
+  await log("Writing systemd unit file...");
   await writeUnitFile(name, startScript);
 
-  log("Allocating ports...");
+  await log("Allocating ports...");
   const ports = await allocatePortBlock(instances, log);
 
-  log("Swapping current symlink...");
+  await log("Swapping current symlink...");
   await swapCurrentSymlink(name, releaseId, log);
 
-  log("Managing systemd instances...");
+  await log("Managing systemd instances...");
   await manageInstances(name, ports, log);
 
   const allDomains: string[] = [...domains];
@@ -180,41 +209,46 @@ const executeDeploy = async (
     await updateRpxyConfig(name, allDomains, ports, log);
   }
 
-  log(`Deployment complete!`);
-  log(`Domains: ${allDomains.join(", ") || "none"}`);
-  log(`Ports: ${ports.join(", ")}`);
+  await log(`Deployment complete!`);
+  await log(`Domains: ${allDomains.join(", ") || "none"}`);
+  await log(`Ports: ${ports.join(", ")}`);
 
   return { releaseId, domains: allDomains, ports };
 };
 
 deployRoute.post("/", async (c) => {
-  const logMessages: string[] = [];
-  const log = (msg: string) => logMessages.push(msg);
+  const formData = await c.req.formData();
+  const { zipFile, name, domains, sslipDomain, instances, dbFolder, storageFolder } =
+    await parseDeployRequest(formData);
 
-  try {
-    const formData = await c.req.formData();
-    const { zipFile, name, domains, sslipDomain, instances, dbFolder, storageFolder } =
-      await parseDeployRequest(formData);
+  const releaseId = ulid();
+  const releaseDir = path.join(getReleasesDir(name), releaseId);
 
-    const result = await executeDeploy(
-      name,
-      zipFile,
-      domains,
-      sslipDomain,
-      instances,
-      dbFolder,
-      storageFolder,
-      log
-    );
+  await fs.mkdir(releaseDir, { recursive: true });
+  await writeStatus(name, releaseId, "running");
 
-    return c.json({
-      success: true,
-      ...result,
-      logs: logMessages,
+  const zipBuffer = Buffer.from(await zipFile.arrayBuffer());
+
+  executeDeploy(name, releaseId, zipBuffer, domains, sslipDomain, instances, dbFolder, storageFolder)
+    .then(() => writeStatus(name, releaseId, "complete"))
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      writeLog(name, releaseId, `Deployment failed: ${message}`);
+      writeStatus(name, releaseId, "failed");
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    log(`Deployment failed: ${message}`);
-    return c.json({ success: false, error: message, logs: logMessages }, 500);
+
+  return c.json({ releaseId });
+});
+
+deployRoute.get("/:name/:releaseId/status", async (c) => {
+  const name = c.req.param("name");
+  const releaseId = c.req.param("releaseId");
+
+  const status = await readStatus(name, releaseId);
+
+  if (!status) {
+    return c.json({ error: "Release not found" }, 404);
   }
+
+  return c.json({ status });
 });
