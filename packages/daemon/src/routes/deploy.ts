@@ -124,13 +124,16 @@ const parseDeployRequest = (formData: FormData) => {
   return { zipFile, name, type, domains, sslipDomain, instances, dbFolder, storageFolder };
 };
 
-const prepareRelease = async (
+const executeDeploy = async (
   name: string,
   zipFile: File,
+  domains: string[],
+  sslipDomain: boolean,
+  instances: number,
   dbFolder: string,
   storageFolder: string,
   log: (msg: string) => void
-): Promise<{ releaseId: string; releaseDir: string }> => {
+) => {
   log(`Starting deployment for ${name}...`);
 
   const zipBuffer = Buffer.from(await zipFile.arrayBuffer());
@@ -151,18 +154,6 @@ const prepareRelease = async (
   log("Installing dependencies...");
   await install(releaseDir, log);
 
-  return { releaseId, releaseDir };
-};
-
-const activateRelease = async (
-  name: string,
-  releaseId: string,
-  releaseDir: string,
-  instances: number,
-  domains: string[],
-  sslipDomain: boolean,
-  log: (msg: string) => void
-): Promise<{ releaseId: string; domains: string[]; ports: number[] }> => {
   log("Detecting start script...");
   const startScript = await getStartScript(releaseDir);
   log(`Using start script: ${startScript}`);
@@ -194,27 +185,6 @@ const activateRelease = async (
   log(`Ports: ${ports.join(", ")}`);
 
   return { releaseId, domains: allDomains, ports };
-};
-
-const executeDeploy = async (
-  name: string,
-  zipFile: File,
-  domains: string[],
-  sslipDomain: boolean,
-  instances: number,
-  dbFolder: string,
-  storageFolder: string,
-  log: (msg: string) => void
-) => {
-  const { releaseId, releaseDir } = await prepareRelease(
-    name,
-    zipFile,
-    dbFolder,
-    storageFolder,
-    log
-  );
-
-  return activateRelease(name, releaseId, releaseDir, instances, domains, sslipDomain, log);
 };
 
 deployRoute.post("/", async (c) => {
