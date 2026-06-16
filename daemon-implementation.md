@@ -20,7 +20,7 @@ All configuration lives in the user's `package.json` under the `patiom` key:
   "patiom": {
     "include": ["dist"],
     "domains": ["api.mydomain.com"],
-    "patiomRunDomain": true,
+    "sslipDomain": true,
     "instances": 2,
     "dbFolder": "db",
     "storageFolder": "storage"
@@ -32,7 +32,7 @@ All configuration lives in the user's `package.json` under the `patiom` key:
 |-------|------|---------|-------------|
 | `include` | `string[]` | `[]` | Files/directories to bundle in deployment archive |
 | `domains` | `string[]` | `[]` | Custom domain names (optional) |
-| `patiomRunDomain` | `boolean` | `true` | Auto-assign `{name}.{ip-dashes}.patiom.run` subdomain |
+| `sslipDomain` | `boolean` | `true` | Auto-assign `{name}.{ip-dashes}.sslip.io` subdomain |
 | `instances` | `number` | `1` | Number of processes to run (future: `"maxcpu"`) |
 | `dbFolder` | `string` | `"db"` | Name of the database folder (symlinked into each release) |
 | `storageFolder` | `string` | `"storage"` | Persistent storage for uploads, cache, etc. (symlinked into each release) |
@@ -158,27 +158,9 @@ If `instances` changes on redeploy:
 
 ## 4. rpxy Configuration
 
-### Global ACME Config (set once during setup.sh)
+### Global ACME Config (set once during setup)
 
-The ACME relay choice is made during server setup and written to rpxy's config.toml. The daemon does not need to manage this — rpxy handles it.
-
-**Option 1: Patiom ACME relay (default)**
-
-All certificate requests pass through `acme.patiom.dev`. `*.patiom.run` domains use ZeroSSL via Patiom's account. Custom domains are forwarded to Let's Encrypt. Required for `patiom.run` domains.
-
-```toml
-listen_port = 80
-listen_port_tls = 443
-
-[experimental.acme]
-dir_url = "https://acme.patiom.dev/directory"
-email = "acme@patiom.dev"
-registry_path = "/var/lib/patiom/acme_registry"
-```
-
-**Option 2: Direct Let's Encrypt**
-
-User provides their own email. No `patiom.run` subdomains. Set via `setup.sh --no-acme-proxy --email you@example.com`.
+All certificates are issued by Let's Encrypt. The user provides their email during server setup.
 
 ```toml
 listen_port = 80
@@ -194,7 +176,7 @@ registry_path = "/var/lib/patiom/acme_registry"
 
 ```toml
 [apps.my-api]
-server_name = "my-api.1-2-3-4.patiom.run"
+server_name = "my-api.1-2-3-4.sslip.io"
 tls = { https_redirection = true, acme = true }
 
 [[apps.my-api.reverse_proxy]]
@@ -233,7 +215,7 @@ rpxy hot-reloads config changes — no restart needed.
 ### `POST /deploy` Handler
 
 1. **Auth** → validate Bearer token from `/var/lib/patiom/token`
-2. **Parse multipart** → zip blob + app name + config JSON (domains, instances, patiomRunDomain, dbFolder, storageFolder)
+2. **Parse multipart** → zip blob + app name + config JSON (domains, instances, sslipDomain, dbFolder, storageFolder)
 3. **Create release** → `/var/lib/patiom/apps/<name>/releases/<timestamp>/`
 4. **Extract zip** → into release directory
 5. **Create db symlink** → `releases/<timestamp>/<dbFolder> -> ../../shared/<dbFolder>/` (create `shared/<dbFolder>/` if it doesn't exist)
@@ -243,7 +225,7 @@ rpxy hot-reloads config changes — no restart needed.
 9. **Swap symlink** → `current -> releases/<timestamp>/`
 10. **Write systemd unit** → template unit file with app name
 11. **Manage instances** → stop old (if any), enable + start new instances
-12. **Build domain list** → custom domains + patiom.run domain
+12. **Build domain list** → custom domains + sslip.io domain
 13. **Update rpxy config** → add/update app blocks with all domains, load-balance upstreams
 14. **Stream result** → domains, ports, status back to CLI
 
@@ -263,15 +245,15 @@ curl -s https://api.ipify.org > /var/lib/patiom/ip
 - Updates `/var/lib/patiom/ip` if changed
 - Logs warning if IP changed (user may need to update DNS for custom domains)
 
-### patiom.run Domain Construction
+### sslip.io Domain Construction
 
 ```typescript
 const ip = "1.2.3.4";
 const ipDashes = ip.replace(/\./g, "-"); // "1-2-3-4"
-const domain = `${appName}.${ipDashes}.patiom.run`;
+const domain = `${appName}.${ipDashes}.sslip.io`;
 ```
 
-Uses sslip.io-style wildcard DNS (already configured).
+Uses [sslip.io](https://sslip.io) wildcard DNS — free, no setup needed.
 
 ---
 
@@ -414,8 +396,8 @@ packages/daemon/
 | 17 | `routes/db.ts` — `GET/POST/DELETE /db` — manage database files | 7, 13 | Database management API |
 | 18 | `routes/apps.ts` — `GET /apps`, list from filesystem | 13 | Nice to have |
 | 19 | Update `server.ts` — mount auth middleware + all routes | 14-18 | Bring it together |
-| 20 | Update `setup.sh` — IP detection, token gen, ACME proxy choice (interactive + `--acme-proxy`/`--no-acme-proxy` flags), daemon systemd service, rpxy ACME config | — | First-time setup |
-| 21 | CLI: send `domains`, `instances`, `patiomRunDomain`, `dbFolder`, `storageFolder` in deploy payload | 2 | CLI needs to send new config |
+| 20 | Update `setup.sh` — IP detection, token gen, email for Let's Encrypt, daemon systemd service, rpxy ACME config | — | First-time setup |
+| 21 | CLI: send `domains`, `instances`, `sslipDomain`, `dbFolder`, `storageFolder` in deploy payload | 2 | CLI needs to send new config |
 | 22 | CLI: display assigned domains after deploy | 21 | User feedback |
 | 23 | CLI: `patiom db list/add/remove` commands | 21 | Database management CLI |
 | 24 | CLI: `patiom env set/delete` commands | 21 | Environment variable management |
@@ -431,14 +413,14 @@ packages/daemon/
 | Script detection | Discuss later | `patiom` vs `start` script logic needs more thought |
 | Clustering model | systemd template units (`@N`) | Each instance independently restartable, simple |
 | Instance count config | `number` in `package.json` | Simple for v1, future: `"maxcpu"` |
-| patiom.run domain | On by default | Good for quick testing, opt-out via `patiomRunDomain: false` |
-| DNS provider | sslip.io | Wildcard DNS already configured, no setup needed |
+| sslip.io domain | On by default | Free, no ACME relay needed, opt-out via `sslipDomain: false` |
+| DNS provider | sslip.io | Wildcard DNS, free, no setup needed |
 | Database management | Folder-based with symlink | All `.db` files in `shared/<dbFolder>/`, symlinked into each release. One symlink per release, not per file. Configurable folder name via `patiom.dbFolder` |
 | Storage folder | `storage` by default, symlinked into releases | Persistent storage for uploads, cache, generated files. Survives deployments. Differentiator over Docker PaaS (no volume mount config needed). Configurable via `patiom.storageFolder` |
 | Environment variables | `.env` in `shared/`, CLI-managed (`set`/`delete`), `dotenv` library + custom serializer | Secrets never in archive, never committed. Stored with `0600` perms, injected via systemd `EnvironmentFile`. Managed via `patiom env set KEY=VALUE` / `patiom env delete KEY`. Plaintext (no encryption) — server security is the boundary. No list command — values are secret. |
 | Turso embedded replicas | User-managed (Option A) + docs (Option C) | Turso works out-of-the-box via libSQL client. Files are just SQLite in `shared/db/`. No daemon changes needed. Document the setup pattern. |
 | Daemon database | None | Filesystem-first, inspectable with `ls` |
-| ACME relay | `https://acme.patiom.dev/directory` (ZeroSSL) by default, opt-out to Let's Encrypt | Already hosted and working. User chooses during setup.sh. If they opt out, no patiom.run domains. |
+| ACME | Let's Encrypt directly | No relay, user provides email during setup. All certs via Let's Encrypt. |
 
 ---
 
@@ -459,7 +441,7 @@ packages/daemon/
 7. **Staging deploys:** Two approaches discussed — (A) multi-server config with separate prod/staging servers and isolated data, (B) deploy-without-publish on the same server (Fly.io style). Open questions:
    - Data isolation: should staging share db/storage with live, or be fully isolated?
    - Cleanup: manual `patiom staging remove`, auto-expire, or both?
-   - Domains: `{name}-{nanoid}.{ip}.patiom.run` — needs more certs per staging deploy, or wildcard cert for `*.patiom.run`
+   - Domains: `{name}-{nanoid}.{ip}.sslip.io` — each staging deploy gets its own cert
    - Promotion: `patiom promote <release-id>` to swap staging to live
 
 ---
@@ -473,7 +455,7 @@ packages/daemon/
 3. Verify:
    - App is running on allocated ports
    - rpxy is routing traffic
-   - patiom.run domain resolves and serves HTTPS
+   - sslip.io domain resolves and serves HTTPS
    - Custom domains work
    - Multiple instances are load-balanced
    - `.env` variables are injected
@@ -533,5 +515,5 @@ Already has: `archiver`, `cac`, `consola`, `package-manager-detector`, `write-pa
 
 ---
 
-**Last updated:** 2026-06-12 (changed from @dotenvx/dotenvx to dotenv + custom serializer, plaintext, create empty .env on first deploy)  
+**Last updated:** 2026-06-16 (replaced patiom.run with sslip.io, removed ACME relay, always use Let's Encrypt directly)  
 **Status:** Ready for implementation

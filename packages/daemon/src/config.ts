@@ -12,4 +12,4 @@ export const PORT_MAX = 51000;
 export const DEFAULT_INSTANCES = 1;
 export const DEFAULT_DB_FOLDER = "db";
 export const DEFAULT_STORAGE_FOLDER = "storage";
-export const DEFAULT_PATIOM_RUN_DOMAIN = true;
+export const DEFAULT_SSLIP_DOMAIN = true;

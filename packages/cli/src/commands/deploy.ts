@@ -73,7 +73,7 @@ const upload = async (globalConfig: GlobalConfig, name: string, zipBuffer: Buffe
   formData.append("name", name);
   formData.append("type", "node");
   formData.append("domains", JSON.stringify(patiom.domains ?? []));
-  formData.append("patiomRunDomain", String(patiom.patiomRunDomain ?? true));
+  formData.append("sslipDomain", String(patiom.sslipDomain ?? true));
   formData.append("instances", String(patiom.instances ?? 1));
   formData.append("dbFolder", patiom.dbFolder ?? "db");
   formData.append("storageFolder", patiom.storageFolder ?? "storage");

@@ -82,7 +82,7 @@ patiom env         Manage environment variables (set, delete)
   "patiom": {
     "include": ["dist"],
     "domains": ["api.mydomain.com"],
-    "patiomRunDomain": true,
+    "sslipDomain": true,
     "instances": 2,
     "dbFolder": "db",
     "storageFolder": "storage"
@@ -94,7 +94,7 @@ patiom env         Manage environment variables (set, delete)
 |-------|---------|-------------|
 | `include` | `[]` | Files and directories to bundle in the deployment archive |
 | `domains` | `[]` | Custom domain names (optional) |
-| `patiomRunDomain` | `true` | Auto-assign a free `{name}.{ip}.patiom.run` subdomain |
+| `sslipDomain` | `true` | Auto-assign a free `{name}.{ip}.sslip.io` subdomain |
 | `instances` | `1` | Number of processes to run (future: `"maxcpu"`) |
 | `dbFolder` | `"db"` | Folder for persistent databases (symlinked per release) |
 | `storageFolder` | `"storage"` | Folder for uploads, cache, generated files (symlinked per release) |
@@ -226,21 +226,19 @@ General-purpose persistent folder for anything that should survive deployments:
 
 No CLI commands needed — just write files to `./storage/`. The daemon auto-creates the folder on first deploy.
 
-### patiom.run Domains
+### sslip.io Domains
 
 Every app gets a free subdomain automatically:
 
 ```
-my-api.1-2-3-4.patiom.run
+my-api.1-2-3-4.sslip.io
 ```
 
-The domain is constructed from your app name and server IP (dots replaced with dashes). It resolves instantly — no DNS setup needed. Uses sslip.io-style wildcard DNS under the hood.
+The domain is constructed from your app name and server IP (dots replaced with dashes). It resolves instantly — no DNS setup needed. Uses [sslip.io](https://sslip.io) wildcard DNS.
 
-> **How SSL works:** All certificate requests go through the Patiom ACME relay. For `*.patiom.run` domains, the relay issues certificates via [ZeroSSL](https://zerossl.com) under Patiom's account. For your custom domains, requests are forwarded to Let's Encrypt. We see your certificate requests but never your private keys.
->
-> If you'd rather manage your own certificates, run `setup.sh --no-acme-proxy --email you@example.com`. Your domains will get certificates directly from Let's Encrypt — but `patiom.run` subdomains won't work.
+> **How SSL works:** All certificates are issued by [Let's Encrypt](https://letsencrypt.org). You provide your email during server setup. Certificates are auto-renewed by rpxy.
 
-To opt out of the automatic subdomain, set `"patiomRunDomain": false` in your config. Custom domains are configured via `"domains": ["api.mydomain.com"]`.
+To opt out of the automatic subdomain, set `"sslipDomain": false` in your config. Custom domains are configured via `"domains": ["api.mydomain.com"]`.
 
 ### First-time login
 
@@ -257,7 +255,7 @@ You'll be prompted for your daemon URL and auth token. Credentials are saved to 
 - **`patiom rollback`** — swap to the previous release in one command.
 - **`patiom logs`** — stream app logs from `journalctl` to your terminal.
 - **`instances: "maxcpu"`** — automatically scale to all available CPU cores.
-- **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Staging instances run on separate ports with unique subdomains (`{name}-{nanoid}.{ip}.patiom.run`). Promote to live when ready.
+- **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Staging instances run on separate ports with unique subdomains (`{name}-{nanoid}.{ip}.sslip.io`). Promote to live when ready.
 - **Multi-server support** — deploy to different servers from one config. `~/.patiom/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
 
 ## Monorepo structure

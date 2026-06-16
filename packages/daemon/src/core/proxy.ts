@@ -52,16 +52,14 @@ export const removeApp = async (host: string): Promise<void> => {
   await writeConfig(config);
 };
 
-export const createAcmeConfig = (useRelay: boolean, email?: string): RpxyConfig => {
+export const createAcmeConfig = (email: string): RpxyConfig => {
   return {
     listen_port: 80,
     listen_port_tls: 443,
     experimental: {
       acme: {
-        dir_url: useRelay
-          ? "https://acme.patiom.dev/directory"
-          : "https://acme-v02.api.letsencrypt.org/directory",
-        email: useRelay ? "acme@patiom.dev" : email!,
+        dir_url: "https://acme-v02.api.letsencrypt.org/directory",
+        email: email,
         registry_path: "/var/lib/patiom/acme_registry",
       },
     },

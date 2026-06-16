@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import { confirm, input, select } from "@inquirer/prompts";
+import { confirm, input } from "@inquirer/prompts";
 import { consola } from "consola";
 import { execa } from "execa";
 import { PATIOM_ROOT } from "./config";
@@ -85,25 +85,13 @@ const configureFirewall = async (os: string, port: number) => {
   }
 };
 
-const configureACME = async (): Promise<{ useRelay: boolean; email?: string }> => {
-  const choice = await select({
-    message: "SSL certificate provider:",
-    choices: [
-      { name: "Patiom ACME relay (free, recommended)", value: "relay" },
-      { name: "Direct Let's Encrypt", value: "letsencrypt" },
-    ],
-  });
-
-  if (choice === "relay") {
-    return { useRelay: true };
-  }
-
+const configureACME = async (): Promise<{ email: string }> => {
   const email = await input({
-    message: "Email for Let's Encrypt:",
+    message: "Email for Let's Encrypt certificates:",
     validate: (v) => (v.includes("@") ? true : "Please enter a valid email"),
   });
 
-  return { useRelay: false, email };
+  return { email };
 };
 
 const setupPatiomDirs = async () => {
@@ -169,7 +157,7 @@ const setup = async () => {
   await configureFirewall(os, DAEMON_PORT);
 
   console.log("");
-  const { useRelay, email } = await configureACME();
+  const { email } = await configureACME();
 
   console.log("");
   consola.start("Setting up Patiom...");
@@ -183,7 +171,7 @@ const setup = async () => {
   await writeIP(ip);
   consola.success(`Public IP: ${ip}`);
 
-  const acmeConfig = createAcmeConfig(useRelay, email);
+  const acmeConfig = createAcmeConfig(email);
   await writeConfig(acmeConfig);
   consola.success("rpxy config written");
 

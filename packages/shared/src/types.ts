@@ -1,7 +1,7 @@
 export type PatiomConfig = {
   include?: string[];
   domains?: string[];
-  patiomRunDomain?: boolean;
+  sslipDomain?: boolean;
   instances?: number;
   dbFolder?: string;
   storageFolder?: string;
@@ -11,7 +11,7 @@ export type DeployRequest = {
   name: string;
   type: "node";
   domains: string[];
-  patiomRunDomain: boolean;
+  sslipDomain: boolean;
   instances: number;
   dbFolder: string;
   storageFolder: string;
