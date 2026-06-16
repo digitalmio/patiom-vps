@@ -15,7 +15,9 @@ export const hasLockfile = async (releaseDir: string): Promise<boolean> => {
 
 export const install = async (releaseDir: string, log: Logger): Promise<void> => {
   const frozen = await hasLockfile(releaseDir);
-  const args = frozen ? ["install", "--frozen-lockfile"] : ["install"];
+  const args = frozen
+    ? ["install", "--frozen-lockfile", "--prod"]
+    : ["install", "--prod"];
 
   log(`Running: pnpm ${args.join(" ")}`);
 

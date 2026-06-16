@@ -2,16 +2,17 @@ import { PATIOM_ROOT } from "../config";
 
 type AppTemplateParams = {
   fnmBinPath: string;
+  startScript: string;
 };
 
-export const appServiceTemplate = ({ fnmBinPath }: AppTemplateParams) => `[Unit]
+export const appServiceTemplate = ({ fnmBinPath, startScript }: AppTemplateParams) => `[Unit]
 Description=Patiom App: %p (port %i)
 After=network.target
 
 [Service]
 Type=exec
 WorkingDirectory=${PATIOM_ROOT}/apps/%p/current
-ExecStart=${fnmBinPath}/node ${PATIOM_ROOT}/apps/%p/current/dist/index.js
+ExecStart=${fnmBinPath}/node ${PATIOM_ROOT}/apps/%p/current/${startScript}
 Restart=always
 EnvironmentFile=${PATIOM_ROOT}/apps/%p/shared/.env
 Environment=PORT=%i
@@ -19,7 +20,7 @@ Environment=PORT=%i
 DynamicUser=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=${PATIOM_ROOT}/apps/%p/current
+ReadWritePaths=${PATIOM_ROOT}/apps/%p
 
 [Install]
 WantedBy=multi-user.target

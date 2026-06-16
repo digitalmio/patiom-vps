@@ -6,7 +6,9 @@
     "suspicious": "warn",
     "pedantic": "warn"
   },
-  "rules": {},
+  "rules": {
+    "max-lines-per-function": ["warn", { "max": 100 }]
+  },
   "env": {
     "builtin": true
   }
