@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import os from "node:os";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { consola } from "consola";
@@ -8,23 +7,13 @@ import { detect } from "package-manager-detector/detect";
 import { resolveCommand } from "package-manager-detector/commands";
 import type { PatiomConfig, GlobalConfig } from "@patiom/shared";
 import { archive } from "../core/archive";
+import { getGlobalConfig } from "../core/api";
 
-const CONFIG_PATH = path.join(os.homedir(), ".patiom", "config.json");
 const execAsync = promisify(exec);
 
 export type DeployOptions = {
   prod: boolean;
   dryRun: boolean;
-};
-
-const readGlobalConfig = async (): Promise<GlobalConfig> => {
-	try {
-		const raw = await fs.readFile(CONFIG_PATH, "utf-8");
-		return JSON.parse(raw);
-	} catch {
-		consola.error("Not logged in. Run `patiom login` first.");
-		process.exit(1);
-	}
 };
 
 const readProjectConfig = async (cwd: string) => {
@@ -51,7 +40,12 @@ const runBuild = async (cwd: string, pkg: { scripts?: Record<string, string> }) 
 		return;
 	}
 
-	const { command, args } = resolveCommand(pm.agent, "run", ["build"]);
+	const resolved = resolveCommand(pm.agent, "run", ["build"]);
+	if (!resolved) {
+		consola.warn("Could not resolve build command, skipping build step.");
+		return;
+	}
+	const { command, args } = resolved;
 	consola.start(`Running build: ${command} ${args.join(" ")}`);
 	try {
 		const { stdout, stderr } = await execAsync(`${command} ${args.join(" ")}`, { cwd });
@@ -108,7 +102,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	console.log("");
 	consola.start("Validating project...");
 
-	const globalConfig = await readGlobalConfig();
+	const globalConfig = getGlobalConfig();
 	const cwd = process.cwd();
   const pkg = await readProjectConfig(cwd);
   const patiom: PatiomConfig = pkg.patiom ?? {};

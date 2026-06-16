@@ -5,7 +5,9 @@
   "bin": {
     "patiom": "./dist/index.mjs"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -15,8 +17,10 @@
     "@patiom/shared": "workspace:*",
     "archiver": "^7.0.1",
     "cac": "^7.0.0",
+    "conf": "^15.1.0",
     "consola": "^3.4.2",
     "glob": "^13.0.6",
+    "ofetch": "^1.5.1",
     "package-manager-detector": "^1.6.0",
     "write-package": "^7.2.0"
   },
