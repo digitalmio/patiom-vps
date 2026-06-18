@@ -5,6 +5,16 @@ import { getSharedDir } from "./releases";
 
 export type Logger = (msg: string) => void;
 
+const envWriteQueues = new Map<string, Promise<void>>();
+
+const getEnvWriteQueue = (appName: string): Promise<void> => {
+  return envWriteQueues.get(appName) ?? Promise.resolve();
+};
+
+const setEnvWriteQueue = (appName: string, queue: Promise<void>): void => {
+  envWriteQueues.set(appName, queue);
+};
+
 export const getEnvPath = (appName: string): string => {
   return path.join(getSharedDir(appName), ".env");
 };
@@ -35,6 +45,12 @@ const serializeEnv = (env: Record<string, string>): string => {
     .join("\n");
 };
 
+const writeEnvAtomic = async (envPath: string, content: string): Promise<void> => {
+  const tmpPath = `${envPath}.tmp`;
+  await fs.writeFile(tmpPath, content, { mode: 0o600 });
+  await fs.rename(tmpPath, envPath);
+};
+
 export const setEnv = async (
   appName: string,
   key: string,
@@ -42,12 +58,16 @@ export const setEnv = async (
   log: Logger
 ): Promise<void> => {
   const envPath = getEnvPath(appName);
-  const env = await parseEnv(envPath);
 
-  env[key] = value;
-  await fs.writeFile(envPath, serializeEnv(env), { mode: 0o600 });
-
-  log(`Set ${key} in .env`);
+  const prev = getEnvWriteQueue(appName);
+  const next = prev.then(async () => {
+    const env = await parseEnv(envPath);
+    env[key] = value;
+    await writeEnvAtomic(envPath, serializeEnv(env));
+    log(`Set ${key} in .env`);
+  });
+  setEnvWriteQueue(appName, next.catch(() => {}));
+  await next;
 };
 
 export const deleteEnv = async (
@@ -56,10 +76,14 @@ export const deleteEnv = async (
   log: Logger
 ): Promise<void> => {
   const envPath = getEnvPath(appName);
-  const env = await parseEnv(envPath);
 
-  delete env[key];
-  await fs.writeFile(envPath, serializeEnv(env), { mode: 0o600 });
-
-  log(`Deleted ${key} from .env`);
+  const prev = getEnvWriteQueue(appName);
+  const next = prev.then(async () => {
+    const env = await parseEnv(envPath);
+    delete env[key];
+    await writeEnvAtomic(envPath, serializeEnv(env));
+    log(`Deleted ${key} from .env`);
+  });
+  setEnvWriteQueue(appName, next.catch(() => {}));
+  await next;
 };

@@ -40,11 +40,12 @@ fi
 # ==========================================
 # STEP 3: fnm, Node, pnpm
 # ==========================================
+export FNM_DIR="/opt/fnm"
 if ! command -v fnm &>/dev/null; then
-    echo "🟩 Installing fnm..."
-    curl -fsSL https://fnm.vercel.app/install | bash
+    echo "🟩 Installing fnm to /opt/fnm..."
+    curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "$FNM_DIR" --skip-shell
 fi
-export PATH="$HOME/.local/share/fnm:$PATH"
+export PATH="$FNM_DIR:$PATH"
 eval "$(fnm env)"
 
 fnm install 24

@@ -3,21 +3,25 @@ import { parse, stringify } from "smol-toml";
 
 const CONFIG_PATH = "/etc/rpxy/config.toml";
 
+export type RpxyUpstream = {
+  location: string;
+};
+
+export type RpxyReverseProxy = {
+  upstream: RpxyUpstream[];
+  load_balance?: string;
+};
+
+export type RpxyAppConfig = {
+  server_name: string;
+  tls?: { https_redirection: boolean; acme: boolean };
+  reverse_proxy: RpxyReverseProxy[];
+};
+
 export type RpxyAcmeConfig = {
   dir_url: string;
   email: string;
   registry_path: string;
-};
-
-export type RpxyUpstream = {
-  location: string;
-  port: number;
-};
-
-export type RpxyApp = {
-  host: string;
-  path: string;
-  upstream: RpxyUpstream;
 };
 
 export type RpxyConfig = {
@@ -26,7 +30,16 @@ export type RpxyConfig = {
   experimental: {
     acme: RpxyAcmeConfig;
   };
-  apps: RpxyApp[];
+  apps: Record<string, RpxyAppConfig>;
+};
+
+let configWriteQueue: Promise<void> = Promise.resolve();
+
+const writeConfigAtomic = async (config: RpxyConfig): Promise<void> => {
+  const toml = stringify(config);
+  const tmpPath = `${CONFIG_PATH}.tmp`;
+  await fs.writeFile(tmpPath, toml);
+  await fs.rename(tmpPath, CONFIG_PATH);
 };
 
 export const readConfig = async (): Promise<RpxyConfig> => {
@@ -35,21 +48,36 @@ export const readConfig = async (): Promise<RpxyConfig> => {
 };
 
 export const writeConfig = async (config: RpxyConfig): Promise<void> => {
-  const toml = stringify(config);
-  await fs.writeFile(CONFIG_PATH, toml);
+  await writeConfigAtomic(config);
 };
 
-export const addApp = async (app: RpxyApp): Promise<void> => {
-  const config = await readConfig();
-  config.apps = config.apps.filter((a) => a.host !== app.host);
-  config.apps.push(app);
-  await writeConfig(config);
-};
+export const addApp = async (
+  appName: string,
+  serverName: string,
+  ports: number[]
+): Promise<void> => {
+  const next = configWriteQueue.then(async () => {
+    const config = await readConfig();
 
-export const removeApp = async (host: string): Promise<void> => {
-  const config = await readConfig();
-  config.apps = config.apps.filter((a) => a.host !== host);
-  await writeConfig(config);
+    const upstreams = ports.map((port) => ({
+      location: `127.0.0.1:${port}`,
+    }));
+
+    config.apps[appName] = {
+      server_name: serverName,
+      tls: { https_redirection: true, acme: true },
+      reverse_proxy: [
+        {
+          upstream: upstreams,
+          load_balance: "round_robin",
+        },
+      ],
+    };
+
+    await writeConfigAtomic(config);
+  });
+  configWriteQueue = next.catch(() => {});
+  await next;
 };
 
 export const createAcmeConfig = (email: string): RpxyConfig => {
@@ -63,6 +91,6 @@ export const createAcmeConfig = (email: string): RpxyConfig => {
         registry_path: "/var/lib/patiom/acme_registry",
       },
     },
-    apps: [],
+    apps: {},
   };
 };

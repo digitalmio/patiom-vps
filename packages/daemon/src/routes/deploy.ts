@@ -9,18 +9,25 @@ import {
 } from "../core/releases";
 import { install } from "../core/pnpm";
 import { allocatePortBlock } from "../core/ports";
-import { enable, start, stop, daemonReload } from "../core/systemd";
-import { addApp, type RpxyApp } from "../core/proxy";
+import { enable, start, stop, daemonReload, listRunningInstances } from "../core/systemd";
+import { addApp } from "../core/proxy";
 import { ensureEnvFile } from "../core/env";
 import { ensureStorageDir } from "../core/storage";
 import { appServiceTemplate } from "../templates/systemd";
-import { PATIOM_ROOT } from "../config";
+import {
+  PATIOM_ROOT,
+  DEFAULT_INSTANCES,
+  DEFAULT_DB_FOLDER,
+  DEFAULT_STORAGE_FOLDER,
+} from "../config";
 import { writeLog } from "../core/logs";
 import { requireScope } from "../middleware/scope";
+import { validateAppName, validateReleaseId } from "../core/validation";
 
 export const deployRoute = new Hono();
 
 const UNIT_FILE_PATH = "/etc/systemd/system";
+const activeDeploys = new Set<string>();
 
 type DeployStatus = "running" | "complete" | "failed";
 
@@ -66,8 +73,8 @@ const getStartScript = async (releaseDir: string): Promise<string> => {
 };
 
 const writeUnitFile = async (appName: string, startScript: string): Promise<void> => {
-  const fnmBinPath = "/home/patiom/.local/share/fnm/aliases/default/bin";
-  const content = appServiceTemplate({ fnmBinPath, startScript });
+  const nodeBinPath = path.dirname(process.execPath);
+  const content = appServiceTemplate({ nodeBinPath, startScript });
   const unitPath = path.join(UNIT_FILE_PATH, `${appName}@.service`);
   await fs.writeFile(unitPath, content);
 };
@@ -77,12 +84,9 @@ const manageInstances = async (
   ports: number[],
   log: (msg: string) => void
 ): Promise<void> => {
-  log("Stopping existing instances...");
-  try {
-    await stop(`${appName}@*`);
-  } catch {
-    // No instances running, ignore
-  }
+  log("Detecting running instances...");
+  const oldPorts = await listRunningInstances(appName);
+  log(`Found ${oldPorts.length} running instance(s)`);
 
   log("Reloading systemd daemon...");
   await daemonReload();
@@ -94,6 +98,20 @@ const manageInstances = async (
       await start(`${appName}@${port}`);
     })
   );
+
+  const portsToStop = oldPorts.filter((port) => !ports.includes(parseInt(port, 10)));
+  if (portsToStop.length > 0) {
+    log(`Stopping ${portsToStop.length} old instance(s)...`);
+    await Promise.all(
+      portsToStop.map(async (port) => {
+        try {
+          await stop(`${appName}@${port}`);
+        } catch {
+          // Instance may have already stopped, ignore
+        }
+      })
+    );
+  }
 };
 
 const buildSslipDomain = async (appName: string): Promise<string | null> => {
@@ -106,6 +124,8 @@ const buildSslipDomain = async (appName: string): Promise<string | null> => {
   }
 };
 
+const sanitizeDomain = (domain: string): string => domain.replaceAll(/[^a-zA-Z0-9-]/gu, "-");
+
 const updateRpxyConfig = async (
   appName: string,
   domains: string[],
@@ -114,21 +134,9 @@ const updateRpxyConfig = async (
 ): Promise<void> => {
   log("Updating rpxy config...");
 
-  const upstreams = ports.map((port) => ({
-    location: `127.0.0.1:${port}`,
-    port,
-  }));
-
   for (const domain of domains) {
-    const app: RpxyApp = {
-      host: domain,
-      path: "/",
-      upstream: {
-        location: upstreams[0].location,
-        port: upstreams[0].port,
-      },
-    };
-    await addApp(app);
+    const rpxyAppName = domains.length > 1 ? `${appName}-${sanitizeDomain(domain)}` : appName;
+    await addApp(rpxyAppName, domain, ports);
     log(`Added domain: ${domain}`);
   }
 };
@@ -138,10 +146,11 @@ const parseDeployRequest = (formData: FormData) => {
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
   const domainsJson = formData.get("domains") as string;
-  const sslipDomain = formData.get("sslipDomain") === "true";
-  const instances = parseInt(formData.get("instances") as string, 10);
-  const dbFolder = formData.get("dbFolder") as string;
-  const storageFolder = formData.get("storageFolder") as string;
+  const sslipDomain = formData.get("sslipDomain") === "true" || formData.get("sslipDomain") === null;
+  const instancesRaw = formData.get("instances") as string | null;
+  const instances = instancesRaw ? parseInt(instancesRaw, 10) || DEFAULT_INSTANCES : DEFAULT_INSTANCES;
+  const dbFolder = (formData.get("dbFolder") as string) || DEFAULT_DB_FOLDER;
+  const storageFolder = (formData.get("storageFolder") as string) || DEFAULT_STORAGE_FOLDER;
 
   if (!zipFile || !name) {
     throw new Error("Missing required fields: zip, name");
@@ -224,9 +233,31 @@ declare module "hono" {
 }
 
 deployRoute.post("/", requireScope("rw"), async (c) => {
-  const formData = await c.req.formData();
-  const { zipFile, name, domains, sslipDomain, instances, dbFolder, storageFolder } =
-    await parseDeployRequest(formData);
+  let formData: FormData;
+  try {
+    formData = await c.req.formData();
+  } catch {
+    return c.json({ error: "Invalid request body" }, 400);
+  }
+
+  let parsed: ReturnType<typeof parseDeployRequest>;
+  try {
+    parsed = await parseDeployRequest(formData);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid request" }, 400);
+  }
+
+  const { zipFile, name, domains, sslipDomain, instances, dbFolder, storageFolder } = parsed;
+
+  try {
+    validateAppName(name);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid input" }, 400);
+  }
+
+  if (activeDeploys.has(name)) {
+    return c.json({ error: "Deployment already in progress for this app" }, 409);
+  }
 
   const releaseId = ulid();
   c.set("releaseId", releaseId);
@@ -235,7 +266,17 @@ deployRoute.post("/", requireScope("rw"), async (c) => {
   await fs.mkdir(releaseDir, { recursive: true });
   await writeStatus(name, releaseId, "running");
 
-  const zipBuffer = Buffer.from(await zipFile.arrayBuffer());
+  let zipBuffer: Buffer;
+  try {
+    zipBuffer = Buffer.from(await zipFile.arrayBuffer());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await writeLog(name, releaseId, `Deployment failed: ${message}`);
+    await writeStatus(name, releaseId, "failed");
+    return c.json({ error: "Failed to read upload" }, 500);
+  }
+
+  activeDeploys.add(name);
 
   executeDeploy(name, releaseId, zipBuffer, domains, sslipDomain, instances, dbFolder, storageFolder)
     .then(() => writeStatus(name, releaseId, "complete"))
@@ -243,6 +284,9 @@ deployRoute.post("/", requireScope("rw"), async (c) => {
       const message = error instanceof Error ? error.message : String(error);
       writeLog(name, releaseId, `Deployment failed: ${message}`);
       writeStatus(name, releaseId, "failed");
+    })
+    .finally(() => {
+      activeDeploys.delete(name);
     });
 
   return c.json({ releaseId });
@@ -251,6 +295,13 @@ deployRoute.post("/", requireScope("rw"), async (c) => {
 deployRoute.get("/:name/:releaseId/status", async (c) => {
   const name = c.req.param("name");
   const releaseId = c.req.param("releaseId");
+
+  try {
+    validateAppName(name);
+    validateReleaseId(releaseId);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid input" }, 400);
+  }
 
   const status = await readStatus(name, releaseId);
 

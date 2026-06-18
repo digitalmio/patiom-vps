@@ -12,6 +12,15 @@ import { tokensRoute } from "./routes/tokens";
 
 const app = new Hono();
 
+app.onError((err, c) => {
+  console.error("Unhandled error:", err);
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+app.notFound((c) => {
+  return c.json({ error: "Not found" }, 404);
+});
+
 app.route("/health", healthRoute);
 
 app.use("*", auditMiddleware);

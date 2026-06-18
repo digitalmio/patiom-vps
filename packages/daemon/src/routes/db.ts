@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { listDbs, addDb, removeDb } from "../core/db";
 import { requireScope } from "../middleware/scope";
+import { validateAppName, validateDbName } from "../core/validation";
 
 export const dbRoute = new Hono();
 
@@ -11,6 +12,12 @@ dbRoute.get("/", async (c) => {
 
   if (!appName) {
     return c.json({ error: "Missing required field: appName" }, 400);
+  }
+
+  try {
+    validateAppName(appName);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid input" }, 400);
   }
 
   const dbs = await listDbs(appName);
@@ -25,6 +32,13 @@ dbRoute.post("/", requireScope("rw"), async (c) => {
     return c.json({ error: "Missing required fields: appName, name" }, 400);
   }
 
+  try {
+    validateAppName(appName);
+    validateDbName(name);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid input" }, 400);
+  }
+
   await addDb(appName, name, log);
 
   return c.json({ success: true, name });
@@ -36,6 +50,13 @@ dbRoute.delete("/:name", requireScope("rw"), async (c) => {
 
   if (!appName || !name) {
     return c.json({ error: "Missing required fields: appName, name" }, 400);
+  }
+
+  try {
+    validateAppName(appName);
+    validateDbName(name);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid input" }, 400);
   }
 
   await removeDb(appName, name, log);

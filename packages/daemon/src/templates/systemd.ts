@@ -1,21 +1,22 @@
 import { PATIOM_ROOT } from "../config";
 
 type AppTemplateParams = {
-  fnmBinPath: string;
+  nodeBinPath: string;
   startScript: string;
 };
 
-export const appServiceTemplate = ({ fnmBinPath, startScript }: AppTemplateParams) => `[Unit]
+export const appServiceTemplate = ({ nodeBinPath, startScript }: AppTemplateParams) => `[Unit]
 Description=Patiom App: %p (port %i)
 After=network.target
 
 [Service]
 Type=exec
 WorkingDirectory=${PATIOM_ROOT}/apps/%p/current
-ExecStart=${fnmBinPath}/node ${PATIOM_ROOT}/apps/%p/current/${startScript}
+ExecStart=${nodeBinPath}/node ${PATIOM_ROOT}/apps/%p/current/${startScript}
 Restart=always
 EnvironmentFile=${PATIOM_ROOT}/apps/%p/shared/.env
 Environment=PORT=%i
+Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 DynamicUser=yes
 ProtectSystem=strict
@@ -44,20 +45,21 @@ WantedBy=multi-user.target
 `;
 
 type DaemonTemplateParams = {
-  fnmBinPath: string;
+  nodeBinPath: string;
   daemonBinPath: string;
   port: number;
 };
 
-export const daemonServiceTemplate = ({ fnmBinPath, daemonBinPath, port }: DaemonTemplateParams) => `[Unit]
+export const daemonServiceTemplate = ({ nodeBinPath, daemonBinPath, port }: DaemonTemplateParams) => `[Unit]
 Description=Patiom Daemon
 After=network.target
 
 [Service]
 Type=exec
-ExecStart=${fnmBinPath}/node ${daemonBinPath}
+ExecStart=${nodeBinPath}/node ${daemonBinPath}
 Restart=always
 Environment=PORT=${port}
+Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 [Install]
 WantedBy=multi-user.target

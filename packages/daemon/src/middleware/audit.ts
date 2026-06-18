@@ -26,19 +26,23 @@ const writeAudit = async (line: string): Promise<void> => {
 export const auditMiddleware = createMiddleware(async (c, next) => {
   await next();
 
-  const token = c.get("token");
-  const tokenDisplay = token ? token.name : "Unknown";
-  const timestamp = new Date().toISOString();
-  const method = c.req.method;
-  const reqPath = c.req.path;
-  const status = c.res.status;
+  try {
+    const token = c.get("token");
+    const tokenDisplay = token ? token.name : "Unknown";
+    const timestamp = new Date().toISOString();
+    const method = c.req.method;
+    const reqPath = c.req.path;
+    const status = c.res.status;
 
-  let line = `${timestamp} [${tokenDisplay}] ${method} ${reqPath} ${status}`;
+    let line = `${timestamp} [${tokenDisplay}] ${method} ${reqPath} ${status}`;
 
-  const releaseId = c.get("releaseId");
-  if (releaseId) {
-    line += ` releaseId=${releaseId}`;
+    const releaseId = c.get("releaseId");
+    if (releaseId) {
+      line += ` releaseId=${releaseId}`;
+    }
+
+    await writeAudit(line);
+  } catch (err) {
+    console.error("Audit log write failed:", err);
   }
-
-  await writeAudit(line);
 });

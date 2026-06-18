@@ -12,7 +12,7 @@ import { rpxyServiceTemplate, daemonServiceTemplate } from "./templates/systemd"
 import { writeTokens, type Token } from "./core/tokens";
 
 const DAEMON_PORT = 4000;
-const DAEMON_BIN_PATH = "/usr/local/bin/patiom-server";
+const DAEMON_BIN_PATH = "/opt/patiom/daemon/dist/server.js";
 
 const checkRoot = () => {
   if (process.getuid?.() !== 0) {
@@ -25,7 +25,7 @@ const detectOS = async (): Promise<string> => {
   try {
     const content = await fs.readFile("/etc/os-release", "utf-8");
     const match = content.match(/^ID=(.+)$/mu);
-    return match?.[1]?.trim() ?? "unknown";
+    return match?.[1]?.trim().replaceAll(/^["']|["']$/gu, "") ?? "unknown";
   } catch {
     return "unknown";
   }
@@ -40,8 +40,6 @@ const detectIP = async (): Promise<string> => {
     return "unknown";
   }
 };
-
-const getBinPath = (): string => path.dirname(process.execPath);
 
 const configureFirewall = async (os: string, port: number) => {
   const shouldConfigure = await confirm({
@@ -91,6 +89,7 @@ const configureACME = async (): Promise<{ email: string }> => {
 const setupPatiomDirs = async () => {
   await fs.mkdir(PATIOM_ROOT, { recursive: true });
   await fs.mkdir(path.join(PATIOM_ROOT, "apps"), { recursive: true });
+  await fs.mkdir(path.join(PATIOM_ROOT, "acme_registry"), { recursive: true });
 };
 
 const generateMasterToken = async (): Promise<string> => {
@@ -116,12 +115,12 @@ const writeSystemdUnit = async (name: string, content: string) => {
   await fs.writeFile(unitPath, content);
 };
 
-const installServices = async (binPath: string) => {
+const installServices = async (nodeBinPath: string) => {
   const rpxyUnit = rpxyServiceTemplate({ rpxyBinPath: "/usr/local/bin/rpxy" });
   await writeSystemdUnit("rpxy", rpxyUnit);
 
   const daemonUnit = daemonServiceTemplate({
-    fnmBinPath: binPath,
+    nodeBinPath,
     daemonBinPath: DAEMON_BIN_PATH,
     port: DAEMON_PORT,
   });
@@ -152,8 +151,6 @@ const setup = async () => {
     process.exit(1);
   }
 
-  const binPath = getBinPath();
-
   await configureFirewall(os, DAEMON_PORT);
 
   console.log("");
@@ -175,7 +172,7 @@ const setup = async () => {
   await writeConfig(acmeConfig);
   consola.success("rpxy config written");
 
-  await installServices(binPath);
+  await installServices(path.dirname(process.execPath));
 
   console.log("");
   consola.success("Patiom server setup complete!");

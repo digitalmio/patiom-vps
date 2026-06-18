@@ -1,5 +1,6 @@
 import { consola } from "consola";
 import { createApiClient } from "../core/api";
+import { getAppName } from "../core/app";
 
 export const envSetCommand = async (keyValue: string) => {
   const eq = keyValue.indexOf("=");
@@ -11,13 +12,14 @@ export const envSetCommand = async (keyValue: string) => {
   const key = keyValue.slice(0, eq);
   const value = keyValue.slice(eq + 1);
   const api = await createApiClient();
+  const appName = await getAppName();
 
   consola.start(`Setting ${key}...`);
 
   try {
     await api("/env", {
       method: "POST",
-      body: { key, value },
+      body: { appName, key, value },
     });
     consola.success(`${key} set.`);
   } catch (error) {
@@ -28,11 +30,12 @@ export const envSetCommand = async (keyValue: string) => {
 
 export const envDeleteCommand = async (key: string) => {
   const api = await createApiClient();
+  const appName = await getAppName();
 
   consola.start(`Deleting ${key}...`);
 
   try {
-    await api(`/env/${encodeURIComponent(key)}`, {
+    await api(`/env/${encodeURIComponent(key)}?appName=${encodeURIComponent(appName)}`, {
       method: "DELETE",
     });
     consola.success(`${key} deleted.`);

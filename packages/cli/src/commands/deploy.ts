@@ -5,9 +5,9 @@ import { promisify } from "node:util";
 import { consola } from "consola";
 import { detect } from "package-manager-detector/detect";
 import { resolveCommand } from "package-manager-detector/commands";
-import type { PatiomConfig, GlobalConfig } from "../types";
+import type { PatiomConfig } from "../types";
 import { archive } from "../core/archive";
-import { getGlobalConfig } from "../core/api";
+import { getGlobalConfig, createApiClient } from "../core/api";
 
 const execAsync = promisify(exec);
 
@@ -66,15 +66,18 @@ type LogsResponse = {
   lines: string[];
   nextOffset: number;
   done: boolean;
+  status?: "complete" | "failed";
 };
 
-type StatusResponse = {
-  status: "running" | "complete" | "failed";
-};
+const MAX_POLL_TIMEOUT = 10 * 60 * 1000;
+const POLL_INTERVAL = 500;
+const POLL_TIMEOUT = 5000;
 
-const upload = async (globalConfig: GlobalConfig, name: string, zipBuffer: Buffer, patiom: PatiomConfig) => {
+const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => {
   consola.start("Deploying to server...");
   console.log("");
+
+  const api = createApiClient();
 
   const formData = new FormData();
   const blob = new Blob([new Uint8Array(zipBuffer)]);
@@ -87,74 +90,65 @@ const upload = async (globalConfig: GlobalConfig, name: string, zipBuffer: Buffe
   formData.append("dbFolder", patiom.dbFolder ?? "db");
   formData.append("storageFolder", patiom.storageFolder ?? "storage");
 
-  const response = await fetch(`${globalConfig.url}/deploy`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${globalConfig.token}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    consola.error(`Deployment failed: ${response.status} ${response.statusText}`);
-    const body = await response.text();
-    if (body) consola.error(body);
+  let releaseId: string;
+  try {
+    const response = await api<DeployResponse>("/deploy", {
+      method: "POST",
+      body: formData,
+      timeout: 120000,
+      retry: 0,
+    });
+    releaseId = response.releaseId;
+  } catch (error) {
+    consola.error(`Deployment failed: ${error instanceof Error ? error.message : error}`);
     process.exit(1);
   }
 
-  const { releaseId } = (await response.json()) as DeployResponse;
-
   let offset = 0;
-  let status: "running" | "complete" | "failed" = "running";
+  let done = false;
+  let deployStatus: "complete" | "failed" | undefined;
+  const startTime = Date.now();
 
-  while (status === "running") {
-    const logsResponse = await fetch(
-      `${globalConfig.url}/logs/${name}/${releaseId}?offset=${offset}`,
-      {
-        headers: { Authorization: `Bearer ${globalConfig.token}` },
-      }
-    );
-
-    if (logsResponse.ok) {
-      const { lines, nextOffset } = (await logsResponse.json()) as LogsResponse;
-      lines.map((line) => console.log(`  ${line}`));
-      offset = nextOffset;
+  while (!done) {
+    if (Date.now() - startTime > MAX_POLL_TIMEOUT) {
+      consola.error("Deployment polling timed out after 10 minutes");
+      process.exit(1);
     }
 
-    const statusResponse = await fetch(
-      `${globalConfig.url}/deploy/${name}/${releaseId}/status`,
-      {
-        headers: { Authorization: `Bearer ${globalConfig.token}` },
-      }
-    );
+    try {
+      const logsResponse = await api<LogsResponse>(`/logs/${name}/${releaseId}?offset=${offset}`, {
+        timeout: POLL_TIMEOUT,
+      });
 
-    if (statusResponse.ok) {
-      const { status: newStatus } = (await statusResponse.json()) as StatusResponse;
-      status = newStatus;
+      logsResponse.lines.map((line) => console.log(`  ${line}`));
+      offset = logsResponse.nextOffset;
+      done = logsResponse.done;
+      if (logsResponse.status) {
+        deployStatus = logsResponse.status;
+      }
+    } catch (error) {
+      consola.warn(`Log fetch failed: ${error instanceof Error ? error.message : error}`);
     }
 
-    if (status === "running") {
+    if (!done) {
       await new Promise((resolve) => {
-        setTimeout(resolve, 500);
+        setTimeout(resolve, POLL_INTERVAL);
       });
     }
   }
 
-  const finalLogsResponse = await fetch(
-    `${globalConfig.url}/logs/${name}/${releaseId}?offset=${offset}`,
-    {
-      headers: { Authorization: `Bearer ${globalConfig.token}` },
-    }
-  );
-
-  if (finalLogsResponse.ok) {
-    const { lines } = (await finalLogsResponse.json()) as LogsResponse;
-    lines.map((line) => console.log(`  ${line}`));
-  }
-
   console.log("");
 
-  if (status === "failed") {
+  try {
+    const finalLogs = await api<LogsResponse>(`/logs/${name}/${releaseId}?offset=${offset}`, {
+      timeout: POLL_TIMEOUT,
+    });
+    finalLogs.lines.map((line) => console.log(`  ${line}`));
+  } catch {
+    // Final log fetch failed, but deploy is done
+  }
+
+  if (deployStatus === "failed") {
     consola.error("Deployment failed");
     process.exit(1);
   }
@@ -164,7 +158,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	console.log("");
 	consola.start("Validating project...");
 
-	const globalConfig = getGlobalConfig();
+	getGlobalConfig();
 	const cwd = process.cwd();
   const pkg = await readProjectConfig(cwd);
   const patiom: PatiomConfig = pkg.patiom ?? {};
@@ -195,7 +189,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	}
 
 	try {
-    await upload(globalConfig, pkg.name, zipBuffer, patiom);
+    await upload(pkg.name, zipBuffer, patiom);
 		console.log("");
 		consola.success("Deployment complete.");
 		console.log("");

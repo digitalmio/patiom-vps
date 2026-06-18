@@ -19,18 +19,33 @@ export const readLog = async (
   appName: string,
   releaseId: string,
   offset: number = 0
-): Promise<{ lines: string[]; nextOffset: number; done: boolean }> => {
+): Promise<{ lines: string[]; nextOffset: number; done: boolean; status?: "complete" | "failed" }> => {
   const logPath = getLogPath(appName, releaseId);
+  const statusPath = path.join(getReleasesDir(appName), releaseId, "status");
 
   try {
     const content = await fs.readFile(logPath, "utf-8");
     const allLines = content.split("\n").filter((line) => line.length > 0);
     const lines = allLines.slice(offset);
 
+    let done = false;
+    let status: "complete" | "failed" | undefined;
+    try {
+      const statusContent = await fs.readFile(statusPath, "utf-8");
+      const statusValue = statusContent.trim();
+      done = statusValue === "complete" || statusValue === "failed";
+      if (done) {
+        status = statusValue as "complete" | "failed";
+      }
+    } catch {
+      // Status file doesn't exist yet, deploy is still running
+    }
+
     return {
       lines,
       nextOffset: offset + lines.length,
-      done: false,
+      done,
+      status,
     };
   } catch {
     return { lines: [], nextOffset: offset, done: false };
