@@ -41,15 +41,7 @@ const detectIP = async (): Promise<string> => {
   }
 };
 
-const detectFnmBinPath = async (): Promise<string> => {
-  try {
-    const { stdout } = await execa("which", ["node"]);
-    return path.dirname(stdout.trim());
-  } catch {
-    consola.error("Node.js not found. Run setup.sh first.");
-    process.exit(1);
-  }
-};
+const getBinPath = (): string => path.dirname(process.execPath);
 
 const configureFirewall = async (os: string, port: number) => {
   const shouldConfigure = await confirm({
@@ -124,12 +116,12 @@ const writeSystemdUnit = async (name: string, content: string) => {
   await fs.writeFile(unitPath, content);
 };
 
-const installServices = async (fnmBinPath: string) => {
+const installServices = async (binPath: string) => {
   const rpxyUnit = rpxyServiceTemplate({ rpxyBinPath: "/usr/local/bin/rpxy" });
   await writeSystemdUnit("rpxy", rpxyUnit);
 
   const daemonUnit = daemonServiceTemplate({
-    fnmBinPath,
+    fnmBinPath: binPath,
     daemonBinPath: DAEMON_BIN_PATH,
     port: DAEMON_PORT,
   });
@@ -160,7 +152,7 @@ const setup = async () => {
     process.exit(1);
   }
 
-  const fnmBinPath = await detectFnmBinPath();
+  const binPath = getBinPath();
 
   await configureFirewall(os, DAEMON_PORT);
 
@@ -183,7 +175,7 @@ const setup = async () => {
   await writeConfig(acmeConfig);
   consola.success("rpxy config written");
 
-  await installServices(fnmBinPath);
+  await installServices(binPath);
 
   console.log("");
   consola.success("Patiom server setup complete!");

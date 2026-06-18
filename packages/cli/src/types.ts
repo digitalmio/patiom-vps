@@ -7,16 +7,6 @@ export type PatiomConfig = {
   storageFolder?: string;
 };
 
-export type DeployRequest = {
-  name: string;
-  type: "node";
-  domains: string[];
-  sslipDomain: boolean;
-  instances: number;
-  dbFolder: string;
-  storageFolder: string;
-};
-
 export type GlobalConfig = {
   url: string;
   token: string;

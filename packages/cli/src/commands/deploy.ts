@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { consola } from "consola";
 import { detect } from "package-manager-detector/detect";
 import { resolveCommand } from "package-manager-detector/commands";
-import type { PatiomConfig, GlobalConfig } from "@patiom/shared";
+import type { PatiomConfig, GlobalConfig } from "../types";
 import { archive } from "../core/archive";
 import { getGlobalConfig } from "../core/api";
 

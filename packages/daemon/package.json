@@ -10,7 +10,6 @@
   "dependencies": {
     "@hono/node-server": "^2.0.4",
     "@inquirer/prompts": "^7.8.2",
-    "@patiom/shared": "workspace:*",
     "adm-zip": "^0.5.17",
     "consola": "^3.4.2",
     "dotenv": "^16.4.7",
