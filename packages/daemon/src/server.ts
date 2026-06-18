@@ -35,5 +35,5 @@ app.route("/tokens", tokensRoute);
 
 serve({
 	fetch: app.fetch,
-	port: Number(process.env.PORT),
+	port: Number(process.env.PORT) || 4000,
 });

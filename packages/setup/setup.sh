@@ -127,6 +127,8 @@ mkdir -p "$DAEMON_DIR"
 if [ -f "./daemon.tgz" ]; then
     echo "📦 Installing from local daemon.tgz..."
     tar -xzf daemon.tgz -C "$DAEMON_DIR" --strip-components=1
+    cd "$DAEMON_DIR"
+    pnpm install --prod
 else
     echo "📦 Downloading daemon from npm..."
     cd "$DAEMON_DIR"

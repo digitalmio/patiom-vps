@@ -94,10 +94,12 @@ patiom env         Manage environment variables (set, delete)
 |-------|---------|-------------|
 | `include` | `[]` | Files and directories to bundle in the deployment archive |
 | `domains` | `[]` | Custom domain names (optional) |
-| `sslipDomain` | `true` | Auto-assign a free `{name}.{ip}.sslip.io` subdomain |
-| `instances` | `1` | Number of processes to run (future: `"maxcpu"`) |
-| `dbFolder` | `"db"` | Folder for persistent databases (symlinked per release) |
-| `storageFolder` | `"storage"` | Folder for uploads, cache, generated files (symlinked per release) |
+| `sslipDomain` | `true` | Auto-assign a free `{name}.{ip}.sslip.io` subdomain (optional) |
+| `instances` | `1` | Number of processes to run (optional, future: `"maxcpu"`) |
+| `dbFolder` | `"db"` | Folder for persistent databases, symlinked per release (optional) |
+| `storageFolder` | `"storage"` | Folder for uploads, cache, generated files, symlinked per release (optional) |
+
+At least one of `domains` or `sslipDomain: true` must be set for the app to be reachable.
 
 That's it. No `patiom.toml`, no `Dockerfile`, no YAML.
 
@@ -123,7 +125,16 @@ The daemon always uses **pnpm**. It extracts the archive, runs `pnpm install`, t
 1. `pnpm run patiom`
 2. `pnpm run start`
 
-If you use a different package manager locally, your scripts are converted automatically.
+If your `start` script uses npm or yarn, add a `patiom` script with pnpm equivalents:
+
+```json
+{
+  "scripts": {
+    "start": "yarn run dev",
+    "patiom": "pnpm run dev"
+  }
+}
+```
 
 ### Persistent Data
 

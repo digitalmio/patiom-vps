@@ -80,6 +80,21 @@ export const addApp = async (
   await next;
 };
 
+export const removeApp = async (appName: string): Promise<void> => {
+  const next = configWriteQueue.then(async () => {
+    const config = await readConfig();
+    const prefix = `${appName}-`;
+    config.apps = Object.fromEntries(
+      Object.entries(config.apps).filter(
+        ([key]) => key !== appName && !key.startsWith(prefix)
+      )
+    );
+    await writeConfigAtomic(config);
+  });
+  configWriteQueue = next.catch(() => {});
+  await next;
+};
+
 export const createAcmeConfig = (email: string): RpxyConfig => {
   return {
     listen_port: 80,

@@ -24,10 +24,3 @@ export const allocatePortBlock = async (
   log(`Allocated ports: ${ports.join(", ")}`);
   return ports;
 };
-
-export const releasePorts = (
-  ports: number[],
-  log: Logger
-): void => {
-  log(`Releasing ports: ${ports.join(", ")}`);
-};

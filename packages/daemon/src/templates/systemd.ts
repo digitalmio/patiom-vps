@@ -12,7 +12,7 @@ After=network.target
 [Service]
 Type=exec
 WorkingDirectory=${PATIOM_ROOT}/apps/%p/current
-ExecStart=${nodeBinPath}/node ${PATIOM_ROOT}/apps/%p/current/${startScript}
+ExecStart=${nodeBinPath}/pnpm run ${startScript}
 Restart=always
 EnvironmentFile=${PATIOM_ROOT}/apps/%p/shared/.env
 Environment=PORT=%i

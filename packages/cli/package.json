@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Patiom CLI - deploy Node.js backends to bare metal",
   "bin": {
-    "patiom": "./dist/index.mjs"
+    "patiom": "./dist/index.js"
   },
   "files": [
     "dist"

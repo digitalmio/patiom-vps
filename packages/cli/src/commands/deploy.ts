@@ -168,6 +168,13 @@ export const deployCommand = async (options: DeployOptions) => {
 		process.exit(1);
 	}
 
+	const hasDomains = (patiom.domains?.length ?? 0) > 0;
+	const sslipEnabled = patiom.sslipDomain ?? true;
+	if (!hasDomains && !sslipEnabled) {
+		consola.error("Must specify at least one of `domains` or `sslipDomain: true` in package.json");
+		process.exit(1);
+	}
+
 	consola.success("Project validated.");
 
 	await runBuild(cwd, pkg);

@@ -40,9 +40,9 @@ export const archive = async ({
 			zip.file(path.join(cwd, "pnpm-lock.yaml"), { name: "pnpm-lock.yaml" });
 		}
 
-		for (const file of files) {
-			zip.file(path.join(cwd, file), { name: file });
-		}
+		files.map((file) =>
+			zip.file(path.join(cwd, file), { name: file })
+		);
 
 		zip.on("error", reject);
 		zip.finalize();

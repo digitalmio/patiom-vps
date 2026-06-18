@@ -10,7 +10,7 @@ import {
 import { install } from "../core/pnpm";
 import { allocatePortBlock } from "../core/ports";
 import { enable, start, stop, daemonReload, listRunningInstances } from "../core/systemd";
-import { addApp } from "../core/proxy";
+import { addApp, removeApp } from "../core/proxy";
 import { ensureEnvFile } from "../core/env";
 import { ensureStorageDir } from "../core/storage";
 import { appServiceTemplate } from "../templates/systemd";
@@ -58,18 +58,11 @@ export const readStatus = async (
 const getStartScript = async (releaseDir: string): Promise<string> => {
   const pkgPath = path.join(releaseDir, "package.json");
   const pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
-  const script = pkg.scripts?.patiom || pkg.scripts?.start;
 
-  if (!script) {
-    throw new Error("No start script found (scripts.patiom or scripts.start)");
-  }
+  if (pkg.scripts?.patiom) return "patiom";
+  if (pkg.scripts?.start) return "start";
 
-  const parts = script.split(" ");
-  if (parts[0] === "node") {
-    return parts.slice(1).join(" ");
-  }
-
-  return script;
+  throw new Error("No start script found (scripts.patiom or scripts.start)");
 };
 
 const writeUnitFile = async (appName: string, startScript: string): Promise<void> => {
@@ -133,6 +126,7 @@ const updateRpxyConfig = async (
   log: (msg: string) => void
 ): Promise<void> => {
   log("Updating rpxy config...");
+  await removeApp(appName);
 
   for (const domain of domains) {
     const rpxyAppName = domains.length > 1 ? `${appName}-${sanitizeDomain(domain)}` : appName;
@@ -157,6 +151,10 @@ const parseDeployRequest = (formData: FormData) => {
   }
 
   const domains: string[] = JSON.parse(domainsJson || "[]");
+
+  if (domains.length === 0 && !sslipDomain) {
+    throw new Error("Must specify at least one of `domains` or `sslipDomain: true`");
+  }
 
   return { zipFile, name, type, domains, sslipDomain, instances, dbFolder, storageFolder };
 };
@@ -195,7 +193,7 @@ const executeDeploy = async (
 
   await log("Detecting start script...");
   const startScript = await getStartScript(releaseDir);
-  await log(`Using start script: ${startScript}`);
+  await log(`Using start script: pnpm run ${startScript}`);
 
   await log("Writing systemd unit file...");
   await writeUnitFile(name, startScript);
@@ -280,10 +278,10 @@ deployRoute.post("/", requireScope("rw"), async (c) => {
 
   executeDeploy(name, releaseId, zipBuffer, domains, sslipDomain, instances, dbFolder, storageFolder)
     .then(() => writeStatus(name, releaseId, "complete"))
-    .catch((error) => {
+    .catch(async (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      writeLog(name, releaseId, `Deployment failed: ${message}`);
-      writeStatus(name, releaseId, "failed");
+      await writeLog(name, releaseId, `Deployment failed: ${message}`);
+      await writeStatus(name, releaseId, "failed");
     })
     .finally(() => {
       activeDeploys.delete(name);
