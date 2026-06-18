@@ -13,6 +13,7 @@ import { tokensRoute } from "./routes/tokens";
 const app = new Hono();
 
 app.route("/health", healthRoute);
+
 app.use("*", auditMiddleware);
 app.use("*", authMiddleware);
 
@@ -24,6 +25,6 @@ app.route("/logs", logsRoute);
 app.route("/tokens", tokensRoute);
 
 serve({
-  fetch: app.fetch,
-  port: Number(process.env.PORT),
+	fetch: app.fetch,
+	port: Number(process.env.PORT),
 });
