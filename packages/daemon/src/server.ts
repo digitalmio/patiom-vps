@@ -12,7 +12,7 @@ import { tokensRoute } from "./routes/tokens";
 
 const app = new Hono();
 
-app.use("/health", healthRoute);
+app.route("/health", healthRoute);
 app.use("*", auditMiddleware);
 app.use("*", authMiddleware);
 
