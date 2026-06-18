@@ -1,14 +1,11 @@
-import fs from "node:fs/promises";
 import { createMiddleware } from "hono/factory";
-import { TOKEN_FILE } from "../config";
+import { validateToken, type Token } from "../core/tokens";
 
-let cachedToken: string | null = null;
-
-const readToken = async (): Promise<string> => {
-  if (cachedToken) return cachedToken;
-  cachedToken = await fs.readFile(TOKEN_FILE, "utf-8");
-  return cachedToken;
-};
+declare module "hono" {
+  interface ContextVariableMap {
+    token: Token;
+  }
+}
 
 export const authMiddleware = createMiddleware(async (c, next) => {
   const authHeader = c.req.header("Authorization");
@@ -18,11 +15,12 @@ export const authMiddleware = createMiddleware(async (c, next) => {
   }
 
   const token = authHeader.slice(7);
-  const expectedToken = await readToken();
+  const tokenData = await validateToken(token);
 
-  if (token !== expectedToken.trim()) {
+  if (!tokenData) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
+  c.set("token", tokenData);
   await next();
 });

@@ -5,6 +5,7 @@ import { initCommand } from "./commands/init";
 import { deployCommand } from "./commands/deploy";
 import { envSetCommand, envDeleteCommand } from "./commands/env";
 import { dbListCommand, dbAddCommand, dbRemoveCommand } from "./commands/db";
+import { tokenCreateCommand, tokenListCommand, tokenRevokeCommand } from "./commands/token";
 import pkg from "../package.json" with { type: "json" };
 
 consola.options.formatOptions = { date: false };
@@ -42,6 +43,20 @@ cli
 cli
   .command("db remove <name>", "Remove a database")
   .action((name) => dbRemoveCommand(name));
+
+cli
+  .command("token create", "Create a new token")
+  .option("--name <name>", "Token name", { default: "Unnamed" })
+  .option("--scope <scope>", "Token scope (rw or ro)", { default: "rw" })
+  .action((options) => tokenCreateCommand(options));
+
+cli
+  .command("token list", "List all tokens")
+  .action(() => tokenListCommand());
+
+cli
+  .command("token revoke <id>", "Revoke a token")
+  .action((id) => tokenRevokeCommand(id));
 
 cli.help();
 cli.version(pkg.version);

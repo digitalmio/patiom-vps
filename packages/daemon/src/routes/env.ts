@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { setEnv, deleteEnv } from "../core/env";
+import { requireScope } from "../middleware/scope";
 
 export const envRoute = new Hono();
 
 const log = (msg: string) => console.log(msg);
 
-envRoute.post("/", async (c) => {
+envRoute.post("/", requireScope("rw"), async (c) => {
   const body = await c.req.json();
   const { appName, key, value } = body;
 
@@ -18,7 +19,7 @@ envRoute.post("/", async (c) => {
   return c.json({ success: true, key });
 });
 
-envRoute.delete("/:key", async (c) => {
+envRoute.delete("/:key", requireScope("rw"), async (c) => {
   const appName = c.req.query("appName");
   const key = c.req.param("key");
 

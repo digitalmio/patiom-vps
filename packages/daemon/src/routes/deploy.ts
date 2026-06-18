@@ -16,6 +16,7 @@ import { ensureStorageDir } from "../core/storage";
 import { appServiceTemplate } from "../templates/systemd";
 import { PATIOM_ROOT } from "../config";
 import { writeLog } from "../core/logs";
+import { requireScope } from "../middleware/scope";
 
 export const deployRoute = new Hono();
 
@@ -216,12 +217,19 @@ const executeDeploy = async (
   return { releaseId, domains: allDomains, ports };
 };
 
-deployRoute.post("/", async (c) => {
+declare module "hono" {
+  interface ContextVariableMap {
+    releaseId: string;
+  }
+}
+
+deployRoute.post("/", requireScope("rw"), async (c) => {
   const formData = await c.req.formData();
   const { zipFile, name, domains, sslipDomain, instances, dbFolder, storageFolder } =
     await parseDeployRequest(formData);
 
   const releaseId = ulid();
+  c.set("releaseId", releaseId);
   const releaseDir = path.join(getReleasesDir(name), releaseId);
 
   await fs.mkdir(releaseDir, { recursive: true });

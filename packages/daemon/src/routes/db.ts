@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { listDbs, addDb, removeDb } from "../core/db";
+import { requireScope } from "../middleware/scope";
 
 export const dbRoute = new Hono();
 
@@ -16,7 +17,7 @@ dbRoute.get("/", async (c) => {
   return c.json(dbs);
 });
 
-dbRoute.post("/", async (c) => {
+dbRoute.post("/", requireScope("rw"), async (c) => {
   const body = await c.req.json();
   const { appName, name } = body;
 
@@ -29,7 +30,7 @@ dbRoute.post("/", async (c) => {
   return c.json({ success: true, name });
 });
 
-dbRoute.delete("/:name", async (c) => {
+dbRoute.delete("/:name", requireScope("rw"), async (c) => {
   const appName = c.req.query("appName");
   const name = c.req.param("name");
 

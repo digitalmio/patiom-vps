@@ -4,10 +4,12 @@ import crypto from "node:crypto";
 import { confirm, input } from "@inquirer/prompts";
 import { consola } from "consola";
 import { execa } from "execa";
+import { ulid } from "ulid";
 import { PATIOM_ROOT } from "./config";
 import { createAcmeConfig, writeConfig } from "./core/proxy";
 import { daemonReload, enable, start } from "./core/systemd";
 import { rpxyServiceTemplate, daemonServiceTemplate } from "./templates/systemd";
+import { writeTokens, type Token } from "./core/tokens";
 
 const DAEMON_PORT = 4000;
 const DAEMON_BIN_PATH = "/usr/local/bin/patiom-server";
@@ -99,11 +101,17 @@ const setupPatiomDirs = async () => {
   await fs.mkdir(path.join(PATIOM_ROOT, "apps"), { recursive: true });
 };
 
-const generateToken = async (): Promise<string> => {
-  const token = crypto.randomBytes(16).toString("hex");
-  const tokenPath = path.join(PATIOM_ROOT, "token");
-  await fs.writeFile(tokenPath, token, { mode: 0o600 });
-  return token;
+const generateMasterToken = async (): Promise<string> => {
+  const token: Token = {
+    id: ulid(),
+    name: "Master Token",
+    token: crypto.randomBytes(16).toString("hex"),
+    scope: "master",
+    createdAt: new Date().toISOString(),
+  };
+
+  await writeTokens({ tokens: [token] });
+  return token.token;
 };
 
 const writeIP = async (ip: string) => {
@@ -164,7 +172,7 @@ const setup = async () => {
 
   await setupPatiomDirs();
 
-  const token = await generateToken();
+  const token = await generateMasterToken();
   consola.success("Auth token generated");
 
   const ip = await detectIP();
