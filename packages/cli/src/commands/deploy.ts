@@ -85,7 +85,7 @@ const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => 
   formData.append("name", name);
   formData.append("type", "node");
   formData.append("domains", JSON.stringify(patiom.domains ?? []));
-  formData.append("sslipDomain", String(patiom.sslipDomain ?? true));
+  formData.append("sslipDomain", String(patiom.sslipDomain ?? false));
   formData.append("instances", String(patiom.instances ?? 1));
   formData.append("dbFolder", patiom.dbFolder ?? "db");
   formData.append("storageFolder", patiom.storageFolder ?? "storage");
@@ -169,7 +169,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	}
 
 	const hasDomains = (patiom.domains?.length ?? 0) > 0;
-	const sslipEnabled = patiom.sslipDomain ?? true;
+	const sslipEnabled = patiom.sslipDomain ?? false;
 	if (!hasDomains && !sslipEnabled) {
 		consola.error("Must specify at least one of `domains` or `sslipDomain: true` in package.json");
 		process.exit(1);

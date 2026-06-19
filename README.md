@@ -94,7 +94,7 @@ patiom env         Manage environment variables (set, delete)
 |-------|---------|-------------|
 | `include` | `[]` | Files and directories to bundle in the deployment archive |
 | `domains` | `[]` | Custom domain names (optional) |
-| `sslipDomain` | `true` | Auto-assign a free `{name}.{ip}.sslip.io` subdomain (optional) |
+| `sslipDomain` | `false` | Auto-assign a free `{name}.{ip}.sslip.io` subdomain (optional) |
 | `instances` | `1` | Number of processes to run (optional, future: `"maxcpu"`) |
 | `dbFolder` | `"db"` | Folder for persistent databases, symlinked per release (optional) |
 | `storageFolder` | `"storage"` | Folder for uploads, cache, generated files, symlinked per release (optional) |
@@ -239,7 +239,7 @@ No CLI commands needed — just write files to `./storage/`. The daemon auto-cre
 
 ### sslip.io Domains
 
-Every app gets a free subdomain automatically:
+Opt in to a free subdomain by setting `"sslipDomain": true`:
 
 ```
 my-api.1-2-3-4.sslip.io
@@ -247,9 +247,9 @@ my-api.1-2-3-4.sslip.io
 
 The domain is constructed from your app name and server IP (dots replaced with dashes). It resolves instantly — no DNS setup needed. Uses [sslip.io](https://sslip.io) wildcard DNS.
 
-> **How SSL works:** All certificates are issued by [Let's Encrypt](https://letsencrypt.org). You provide your email during server setup. Certificates are auto-renewed by rpxy.
+> **Rate limits:** sslip.io domains share a single Let's Encrypt rate limit bucket. During peak hours, certificate issuance may fail due to heavy usage by other users. If you need reliable SSL, use a custom domain instead — `"domains": ["api.mydomain.com"]`, or see [managed domains](#managed-domains-planned) below.
 
-To opt out of the automatic subdomain, set `"sslipDomain": false` in your config. Custom domains are configured via `"domains": ["api.mydomain.com"]`.
+> **How SSL works:** All certificates are issued by [Let's Encrypt](https://letsencrypt.org). You provide your email during server setup. Certificates are auto-renewed by rpxy.
 
 ### First-time login
 
@@ -266,8 +266,15 @@ You'll be prompted for your daemon URL and auth token. Credentials are saved to 
 - **`patiom rollback`** — swap to the previous release in one command.
 - **`patiom logs`** — stream app logs from `journalctl` to your terminal.
 - **`instances: "maxcpu"`** — automatically scale to all available CPU cores.
-- **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Staging instances run on separate ports with unique subdomains (`{name}-{nanoid}.{ip}.sslip.io`). Promote to live when ready.
+- **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Promote to live when ready.
 - **Multi-server support** — deploy to different servers from one config. `~/.patiom/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
+
+## Managed domains (planned)
+
+> These are ideas we're exploring — not commitments. They depend on the project's success and community interest.
+
+- **`patiom.run` domains** — dedicated subdomains with managed SSL, no shared rate limits. `patiom deploy` automatically provisions `{name}.patiom.run` with valid certificates.
+- **Custom deployment domains** — bring your own domain (e.g. `foo.example.com`), delegate DNS to Patiom nameservers, and get automatic wildcard SSL for all your apps. No manual certificate management.
 
 ## Monorepo structure
 

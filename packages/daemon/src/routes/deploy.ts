@@ -140,7 +140,7 @@ const parseDeployRequest = (formData: FormData) => {
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
   const domainsJson = formData.get("domains") as string;
-  const sslipDomain = formData.get("sslipDomain") === "true" || formData.get("sslipDomain") === null;
+  const sslipDomain = formData.get("sslipDomain") === "true";
   const instancesRaw = formData.get("instances") as string | null;
   const instances = instancesRaw ? parseInt(instancesRaw, 10) || DEFAULT_INSTANCES : DEFAULT_INSTANCES;
   const dbFolder = (formData.get("dbFolder") as string) || DEFAULT_DB_FOLDER;
