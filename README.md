@@ -84,6 +84,8 @@ curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/setu
 
 This installs fnm + Node 24 + pnpm, the rpxy reverse proxy, and the Patiom daemon. It also configures the firewall and sets up Let's Encrypt for SSL. At the end, you'll get a **master token** — store it safely.
 
+> **Upgrading the daemon later?** On the server, run `patiom-server upgrade`.
+
 ### 2. Install the CLI
 
 ```bash
@@ -179,6 +181,14 @@ If your `start` script uses npm or yarn, add a `patiom` script with pnpm equival
   }
 }
 ```
+
+## Upgrading
+
+```bash
+patiom-server upgrade
+```
+
+Updates the `@patiom/daemon` package globally and restarts the daemon service. Your apps keep running — they're separate systemd units.
 
 ## Persistent Data
 

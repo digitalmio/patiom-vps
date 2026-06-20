@@ -12,14 +12,6 @@ import { rpxyServiceTemplate, daemonServiceTemplate } from "./templates/systemd"
 import { writeTokens, type Token } from "./core/tokens";
 
 const DAEMON_PORT = 4000;
-const DAEMON_BIN_PATH = "/opt/patiom/daemon/dist/server.js";
-
-const checkRoot = () => {
-  if (process.getuid?.() !== 0) {
-    consola.error("This script must be run as root. Try: sudo patiom-server setup");
-    process.exit(1);
-  }
-};
 
 const detectOS = async (): Promise<string> => {
   try {
@@ -121,7 +113,6 @@ const installServices = async (nodeBinPath: string) => {
 
   const daemonUnit = daemonServiceTemplate({
     nodeBinPath,
-    daemonBinPath: DAEMON_BIN_PATH,
     port: DAEMON_PORT,
   });
   await writeSystemdUnit("patiom-daemon", daemonUnit);
@@ -140,8 +131,6 @@ const setup = async () => {
   console.log("");
   consola.info("Patiom Server Setup");
   console.log("");
-
-  checkRoot();
 
   const os = await detectOS();
   consola.info(`Detected OS: ${os}`);
@@ -184,9 +173,11 @@ const setup = async () => {
   console.log("");
 };
 
-try {
-  await setup();
-} catch (err) {
-  consola.error("Setup failed:", err);
-  process.exit(1);
-}
+export const runSetup = async () => {
+  try {
+    await setup();
+  } catch (err) {
+    consola.error("Setup failed:", err);
+    process.exit(1);
+  }
+};

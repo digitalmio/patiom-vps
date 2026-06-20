@@ -117,31 +117,7 @@ mkdir -p /etc/rpxy
 # STEP 5: Install Patiom Daemon
 # ==========================================
 echo "📦 Installing Patiom daemon..."
-
-DAEMON_DIR="/opt/patiom/daemon"
-mkdir -p "$DAEMON_DIR"
-
-# Download daemon from npm (or copy from local if deploying from monorepo)
-# For production: npm pack @patiom/daemon and extract
-# For development: copy from monorepo
-
-if [ -f "./daemon.tgz" ]; then
-    echo "📦 Installing from local daemon.tgz..."
-    tar -xzf daemon.tgz -C "$DAEMON_DIR" --strip-components=1
-    cd "$DAEMON_DIR"
-    pnpm install --prod
-else
-    echo "📦 Downloading daemon from npm..."
-    TARBALL_URL=$(curl -s https://registry.npmjs.org/@patiom/daemon/latest | jq -r .dist.tarball)
-    curl -sfSL -o "$DAEMON_DIR/daemon.tgz" "$TARBALL_URL"
-    cd "$DAEMON_DIR"
-    tar -xzf daemon.tgz --strip-components=1
-    rm daemon.tgz
-    pnpm install --prod
-fi
-
-# Make setup script executable
-chmod +x "$DAEMON_DIR/dist/setup.js"
+pnpm install -g @patiom/daemon
 
 # ==========================================
 # STEP 6: Hand off to Node setup
@@ -150,4 +126,4 @@ echo ""
 echo "🚀 Launching interactive setup..."
 echo ""
 
-exec node "$DAEMON_DIR/dist/setup.js"
+exec patiom-server setup

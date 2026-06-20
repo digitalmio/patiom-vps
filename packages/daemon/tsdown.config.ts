@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ["src/server.ts", "src/setup.ts"],
+  entry: "src/index.ts",
   format: "esm",
   platform: "node",
   target: "node20",

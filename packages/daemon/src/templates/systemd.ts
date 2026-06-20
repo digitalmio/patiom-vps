@@ -46,17 +46,16 @@ WantedBy=multi-user.target
 
 type DaemonTemplateParams = {
   nodeBinPath: string;
-  daemonBinPath: string;
   port: number;
 };
 
-export const daemonServiceTemplate = ({ nodeBinPath, daemonBinPath, port }: DaemonTemplateParams) => `[Unit]
+export const daemonServiceTemplate = ({ nodeBinPath, port }: DaemonTemplateParams) => `[Unit]
 Description=Patiom Daemon
 After=network.target
 
 [Service]
 Type=exec
-ExecStart=${nodeBinPath}/node ${daemonBinPath}
+ExecStart=${nodeBinPath}/patiom-server serve
 Restart=always
 Environment=PORT=${port}
 Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

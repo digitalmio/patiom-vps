@@ -33,7 +33,9 @@ app.route("/apps", appsRoute);
 app.route("/logs", logsRoute);
 app.route("/tokens", tokensRoute);
 
-serve({
-	fetch: app.fetch,
-	port: Number(process.env.PORT) || 4000,
-});
+export const startServer = () => {
+	serve({
+		fetch: app.fetch,
+		port: Number(process.env.PORT) || 4000,
+	});
+};

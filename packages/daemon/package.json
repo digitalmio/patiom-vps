@@ -1,9 +1,12 @@
 {
   "name": "@patiom/daemon",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
+  "bin": {
+    "patiom-server": "./dist/index.js"
+  },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/index.ts serve",
     "build": "tsdown"
   },
   "files": [
@@ -13,6 +16,7 @@
     "@hono/node-server": "^2.0.4",
     "@inquirer/prompts": "^7.8.2",
     "adm-zip": "^0.5.17",
+    "commander": "^15.0.0",
     "consola": "^3.4.2",
     "dotenv": "^16.4.7",
     "execa": "^9.6.1",
@@ -29,7 +33,7 @@
     "typescript": "^5.8.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.11.0"
   },
   "license": "ISC"
 }
