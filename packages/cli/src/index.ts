@@ -12,7 +12,11 @@ consola.options.formatOptions = { date: false };
 
 const cli = cac("patiom");
 
-cli.command("login", "Link your local machine to the Patiom daemon").action(loginCommand);
+cli
+  .command("login", "Link your local machine to the Patiom daemon")
+  .option("--url <url>", "Daemon API URL")
+  .option("--token <token>", "Auth token")
+  .action((options) => loginCommand(options));
 
 cli.command("init", "Bootstrap a new Patiom project").action(initCommand);
 
