@@ -6,6 +6,22 @@ Zero proprietary config files. Zero Docker. Zero hidden build steps.
 
 ## Why Patiom?
 
+### VPS prices are climbing
+
+Hetzner — long the default for cheap VPSes — has been doubling and tripling
+prices across its small-server lineup. The entry-level tiers where side projects
+live are getting noticeably more expensive.
+
+Container-based platforms like Coolify and Dokploy need 1–2 GB of RAM before your
+first app even boots. On a 2 GB VPS, half your memory is gone before your code
+runs. When the VPS itself just doubled in price, paying for Docker's overhead
+becomes the expensive part — not your app.
+
+Patiom runs your app as a bare systemd process — no container runtime, no
+server-side builds, no build OOMs on small boxes. The daemon is a small Node
+process and the reverse proxy is written in Rust. On a 1 GB VPS, nearly all
+of that RAM is yours.
+
 ### "I could do this with a bash script"
 
 You could — until you need the second deploy. A `rsync && pnpm install && systemctl restart`
