@@ -37,11 +37,16 @@ program
 
 program
   .command("setup")
-  .description("Interactive first-time server setup")
+  .description("First-time server setup")
+  .requiredOption("--email <email>", "Email for Let's Encrypt certificates")
   .option(skipRootOpt, "Skip root check for development")
   .action((options) => {
     checkRoot(options.devSkipRootCheck);
-    return runSetup();
+    if (!/^\S+@\S+\.\S+$/u.test(options.email)) {
+      consola.error("Invalid email format. Provide a valid email for Let's Encrypt certificates.");
+      process.exit(1);
+    }
+    return runSetup(options.email);
   });
 
 program

@@ -9,6 +9,12 @@ fi
 echo "🚀 Patiom Server Bootstrap"
 echo ""
 
+if [ -z "$EMAIL" ]; then
+    echo "❌ Email is required for Let's Encrypt certificates."
+    echo "   Usage: curl -sSL https://... | sudo EMAIL=you@example.com bash"
+    exit 1
+fi
+
 # ==========================================
 # STEP 1: OS Detection
 # ==========================================
@@ -31,7 +37,7 @@ if [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
     apt-get install -y curl wget unzip jq
 elif [[ "$OS" == "almalinux" || "$OS" == "rocky" || "$OS" == "centos" || "$OS" == "fedora" || "$OS" == "rhel" ]]; then
     echo "📦 Installing dnf dependencies..."
-    dnf install -y curl wget unzip jq firewalld
+    dnf install -y curl wget unzip jq
 else
     echo "❌ Unsupported OS: $OS"
     exit 1
@@ -124,7 +130,7 @@ pnpm install -g @patiom/daemon
 # STEP 6: Hand off to Node setup
 # ==========================================
 echo ""
-echo "🚀 Launching interactive setup..."
+echo "🚀 Launching setup..."
 echo ""
 
-exec patiom-server setup </dev/tty
+exec patiom-server setup --email "$EMAIL"

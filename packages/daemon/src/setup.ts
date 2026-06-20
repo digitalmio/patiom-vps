@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import { confirm, input } from "@inquirer/prompts";
 import { consola } from "consola";
 import { execa } from "execa";
 import { ulid } from "ulid";
@@ -31,51 +30,6 @@ const detectIP = async (): Promise<string> => {
     consola.warn("Could not detect public IP");
     return "unknown";
   }
-};
-
-const configureFirewall = async (os: string, port: number) => {
-  const shouldConfigure = await confirm({
-    message: "Configure firewall?",
-    default: true,
-  });
-
-  if (!shouldConfigure) {
-    consola.info("Skipping firewall configuration");
-    return;
-  }
-
-  if (os === "ubuntu" || os === "debian") {
-    consola.start("Configuring UFW...");
-    await execa("ufw", ["default", "deny", "incoming"]);
-    await execa("ufw", ["default", "allow", "outgoing"]);
-    await execa("ufw", ["allow", "22/tcp"]);
-    await execa("ufw", ["allow", "80/tcp"]);
-    await execa("ufw", ["allow", "443/tcp"]);
-    await execa("ufw", ["allow", `${port}/tcp`]);
-    await execa("ufw", ["--force", "enable"]);
-    consola.success("UFW configured");
-  } else if (["almalinux", "rocky", "centos", "fedora", "rhel"].includes(os)) {
-    consola.start("Configuring Firewalld...");
-    await execa("systemctl", ["enable", "--now", "firewalld"]);
-    await execa("firewall-cmd", ["--permanent", "--zone=public", "--add-port=22/tcp"]);
-    await execa("firewall-cmd", ["--permanent", "--zone=public", "--add-port=80/tcp"]);
-    await execa("firewall-cmd", ["--permanent", "--zone=public", "--add-port=443/tcp"]);
-    await execa("firewall-cmd", ["--permanent", "--zone=public", "--add-port", `${port}/tcp`]);
-    await execa("firewall-cmd", ["--reload"]);
-    await execa("setsebool", ["-P", "httpd_can_network_connect", "1"]);
-    consola.success("Firewalld configured");
-  } else {
-    consola.warn(`Unsupported OS for firewall: ${os}`);
-  }
-};
-
-const configureACME = async (): Promise<{ email: string }> => {
-  const email = await input({
-    message: "Email for Let's Encrypt certificates:",
-    validate: (v) => (v.includes("@") ? true : "Please enter a valid email"),
-  });
-
-  return { email };
 };
 
 const setupPatiomDirs = async () => {
@@ -127,7 +81,7 @@ const installServices = async (nodeBinPath: string) => {
   consola.success("Patiom daemon started");
 };
 
-const setup = async () => {
+const setup = async (email: string) => {
   console.log("");
   consola.info("Patiom Server Setup");
   console.log("");
@@ -139,11 +93,6 @@ const setup = async () => {
     consola.error("Unsupported OS. Please use Ubuntu, Debian, AlmaLinux, Rocky, CentOS, Fedora, or RHEL.");
     process.exit(1);
   }
-
-  await configureFirewall(os, DAEMON_PORT);
-
-  console.log("");
-  const { email } = await configureACME();
 
   console.log("");
   consola.start("Setting up Patiom...");
@@ -171,11 +120,13 @@ const setup = async () => {
   consola.info("Next steps:");
   console.log(`  patiom login --url http://${ip}:${DAEMON_PORT} --token ${token}`);
   console.log("");
+  consola.info("Firewall: ensure ports 22 (SSH), 80 (HTTP), 443 (HTTPS), and 4000 (daemon) are open");
+  console.log("");
 };
 
-export const runSetup = async () => {
+export const runSetup = async (email: string) => {
   try {
-    await setup();
+    await setup(email);
   } catch (err) {
     consola.error("Setup failed:", err);
     process.exit(1);
