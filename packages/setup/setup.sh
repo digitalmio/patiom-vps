@@ -132,11 +132,11 @@ if [ -f "./daemon.tgz" ]; then
     pnpm install --prod
 else
     echo "📦 Downloading daemon from npm..."
+    TARBALL_URL=$(curl -s https://registry.npmjs.org/@patiom/daemon/latest | jq -r .dist.tarball)
+    curl -sfSL -o "$DAEMON_DIR/daemon.tgz" "$TARBALL_URL"
     cd "$DAEMON_DIR"
-    echo '{"name":"patiom-daemon-install","private":true}' > package.json
-    pnpm pack @patiom/daemon
-    tar -xzf patiom-daemon-*.tgz --strip-components=1
-    rm patiom-daemon-*.tgz
+    tar -xzf daemon.tgz --strip-components=1
+    rm daemon.tgz
     pnpm install --prod
 fi
 
