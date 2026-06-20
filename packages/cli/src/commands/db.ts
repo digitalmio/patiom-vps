@@ -9,12 +9,12 @@ export const dbListCommand = async () => {
   try {
     const dbs = await api<string[]>(`/db?appName=${encodeURIComponent(appName)}`);
     if (dbs.length === 0) {
-      consola.info("No databases found.");
+      consola.info(`No databases found for ${appName}.`);
       return;
     }
 
     console.log("");
-    dbs.map((db) => console.log(`  ${db}`));
+    dbs.forEach((db) => console.log(`  ${db}`));
     console.log("");
   } catch (error) {
     consola.error(`Failed: ${error instanceof Error ? error.message : error}`);

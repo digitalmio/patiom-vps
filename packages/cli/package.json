@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "archiver": "^7.0.1",
-    "cac": "^7.0.0",
+    "commander": "^15.0.0",
     "conf": "^15.1.0",
     "consola": "^3.4.2",
     "glob": "^13.0.6",

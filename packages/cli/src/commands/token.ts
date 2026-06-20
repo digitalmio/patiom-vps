@@ -37,7 +37,7 @@ export const tokenListCommand = async () => {
     const tokens = await api<Array<{ id: string; name: string; scope: string; createdAt: string; last8: string }>>("/tokens");
 
     if (tokens.length === 0) {
-      consola.info("No tokens found.");
+      consola.info("No tokens found. Your master token should appear here after `patiom-server setup`.");
       return;
     }
 

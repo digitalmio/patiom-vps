@@ -15,9 +15,14 @@ export const getAppName = async (): Promise<string> => {
       process.exit(1);
     }
 
+    if (!pkg.patiom) {
+      consola.error("This project hasn't been initialized for Patiom. Run `patiom init` first.");
+      process.exit(1);
+    }
+
     return pkg.name;
   } catch {
-    consola.error("package.json not found. Run this command from your project directory.");
+    consola.error("No package.json found in the current directory. Run this from a project folder.");
     process.exit(1);
   }
 };

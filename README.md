@@ -58,7 +58,34 @@ of Docker and build steps, you want Patiom.
 
 Patiom moves your project from your machine to your server using nothing but `package.json` and a lockfile. Everything is managed through the **CLI** on your machine and the **Daemon** running on your server.
 
-### Commands
+## Quick Start
+
+### 1. Server setup (one command)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/setup/setup.sh | sudo bash
+```
+
+This installs fnm + Node 24 + pnpm, the rpxy reverse proxy, and the Patiom daemon. It also configures the firewall and sets up Let's Encrypt for SSL. At the end, you'll get a **master token** — store it safely.
+
+### 2. Install the CLI
+
+```bash
+npm install -g @patiom/cli
+```
+
+### 3. Deploy your first app
+
+```bash
+patiom login --url http://YOUR_SERVER_IP:4000 --token YOUR_MASTER_TOKEN
+cd my-project
+patiom init
+patiom deploy
+```
+
+That's it. Your app is running behind rpxy with automatic HTTPS, sandboxed under systemd.
+
+## Commands
 
 ```
 patiom login     Link your machine to a Patiom daemon
@@ -66,9 +93,10 @@ patiom init      Bootstrap a project for deployment
 patiom deploy    Build, zip, and upload your application
 patiom db         Manage persistent database files
 patiom env         Manage environment variables (set, delete)
+patiom token       Manage auth tokens (create, list, revoke)
 ```
 
-### Project setup
+## Project setup
 
 `patiom init` adds a `patiom` key to your `package.json`:
 
@@ -103,13 +131,13 @@ At least one of `domains` or `sslipDomain: true` must be set for the app to be r
 
 That's it. No `patiom.toml`, no `Dockerfile`, no YAML.
 
-### Build
+## Build
 
 If your `package.json` has a `scripts.build`, the CLI runs it locally before deploying. Patiom detects your package manager (pnpm, npm, or yarn) from your lockfile and runs the build with it.
 
 If you have no build script, Patiom deploys your source as-is.
 
-### Deploy
+## Deploy
 
 ```
 patiom deploy           # build + upload to production
@@ -118,7 +146,7 @@ patiom deploy --dry-run # build + zip locally without uploading
 
 `patiom deploy` archives `package.json`, your lockfile, and everything in `patiom.include`, then uploads the archive to your daemon.
 
-### On the server
+## On the server
 
 The daemon always uses **pnpm**. It extracts the archive, runs `pnpm install`, then runs whichever script exists (checked in order):
 
@@ -136,18 +164,18 @@ If your `start` script uses npm or yarn, add a `patiom` script with pnpm equival
 }
 ```
 
-### Persistent Data
+## Persistent Data
 
 Patiom keeps your data safe across deployments through two special folders in `shared/`:
 
 ```
 /var/lib/patiom/apps/my-api/
-├── releases/           # each deploy gets its own timestamped directory
+├── releases/           # each deploy gets its own ULID-named directory
 ├── shared/
 │   ├── .env            # secrets (never in the archive)
 │   ├── db/             # databases survive every deploy
 │   └── storage/        # uploads, cache, exports survive every deploy
-└── current → releases/1717087200/
+└── current → releases/01HXYZ.../
 ```
 
 On each deploy, the daemon symlinks `db/` and `storage/` into the release directory. Your code accesses them with natural paths:
@@ -237,7 +265,25 @@ General-purpose persistent folder for anything that should survive deployments:
 
 No CLI commands needed — just write files to `./storage/`. The daemon auto-creates the folder on first deploy.
 
-### sslip.io Domains
+## Auth Tokens
+
+Tokens control access to the daemon API from the CLI or CI/CD pipelines. The master token is created during server setup.
+
+| Scope | Can deploy/manage env/db | Can manage tokens |
+|-------|--------------------------|-------------------|
+| master | yes | yes |
+| rw | yes | no |
+| ro | no (read-only) | no |
+
+```bash
+patiom token create --name "CI/CD" --scope rw    # create a deploy token
+patiom token list                                  # list all tokens
+patiom token revoke <id>                           # revoke a token
+```
+
+The master token cannot be revoked via the API. Store it safely.
+
+## sslip.io Domains
 
 Opt in to a free subdomain by setting `"sslipDomain": true`:
 
@@ -251,13 +297,14 @@ The domain is constructed from your app name and server IP (dots replaced with d
 
 > **How SSL works:** All certificates are issued by [Let's Encrypt](https://letsencrypt.org). You provide your email during server setup. Certificates are auto-renewed by rpxy.
 
-### First-time login
+## First-time login
 
-```
-patiom login
+```bash
+patiom login --url http://YOUR_SERVER_IP:4000 --token YOUR_TOKEN    # non-interactive
+patiom login                                                         # interactive
 ```
 
-You'll be prompted for your daemon URL and auth token. Credentials are saved to `~/.patiom/config.json`.
+You'll be prompted for your daemon URL and auth token (or pass them as flags). Credentials are saved to your system config directory — the CLI prints the path on success.
 
 ## Coming in v2
 
@@ -267,7 +314,7 @@ You'll be prompted for your daemon URL and auth token. Credentials are saved to 
 - **`patiom logs`** — stream app logs from `journalctl` to your terminal.
 - **`instances: "maxcpu"`** — automatically scale to all available CPU cores.
 - **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Promote to live when ready.
-- **Multi-server support** — deploy to different servers from one config. `~/.patiom/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
+- **Multi-server support** — deploy to different servers from one config. `~/.config/patiom-nodejs/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
 
 ## Managed domains (planned)
 
@@ -282,8 +329,8 @@ You'll be prompted for your daemon URL and auth token. Credentials are saved to 
 patiom/
 ├── packages/
 │   ├── cli/        @patiom/cli — developer tool
-│   ├── daemon/     @patiom/daemon — server agent (planned)
-│   └── shared/     shared types & schemas (planned)
+│   ├── daemon/     @patiom/daemon — server agent
+│   └── setup/      setup.sh — server bootstrap script
 ├── pnpm-workspace.yaml
 └── package.json
 ```

@@ -1,5 +1,5 @@
 import { consola } from "consola";
-import cac from "cac";
+import { program } from "commander";
 import { loginCommand } from "./commands/login";
 import { initCommand } from "./commands/init";
 import { deployCommand } from "./commands/deploy";
@@ -10,59 +10,82 @@ import pkg from "../package.json" with { type: "json" };
 
 consola.options.formatOptions = { date: false };
 
-const cli = cac("patiom");
+program
+	.name("patiom")
+	.description("Radically simple, containerless, bare-metal deployment for Node.js");
 
-cli
-  .command("login", "Link your local machine to the Patiom daemon")
-  .option("--url <url>", "Daemon API URL")
-  .option("--token <token>", "Auth token")
-  .action((options) => loginCommand(options));
+program
+	.command("login")
+	.description("Link your local machine to the Patiom daemon")
+	.option("--url <url>", "Daemon API URL")
+	.option("--token <token>", "Auth token")
+	.action((options) => loginCommand(options));
 
-cli.command("init", "Bootstrap a new Patiom project").action(initCommand);
+program
+	.command("init")
+	.description("Bootstrap a new Patiom project")
+	.action(() => initCommand());
 
-cli
-  .command("deploy", "Build, zip, and upload your application")
-  .option("--prod", "Deploy to production (default)", { default: true })
-  .option("--dry-run", "Build and zip locally without uploading", {
-    default: false,
-  })
-  .action(deployCommand);
+program
+	.command("deploy")
+	.description("Build, zip, and upload your application")
+	.option("--prod", "Deploy to production (default)", true)
+	.option("--dry-run", "Build and zip locally without uploading", false)
+	.action((options) => deployCommand(options));
 
-cli
-  .command("env set <keyValue>", "Set an environment variable (e.g. KEY=VALUE)")
-  .action((keyValue) => envSetCommand(keyValue));
+const env = program
+	.command("env")
+	.description("Manage environment variables");
 
-cli
-  .command("env delete <key>", "Delete an environment variable")
-  .action((key) => envDeleteCommand(key));
+env
+	.command("set <keyValue>")
+	.description("Set an environment variable (e.g. KEY=VALUE)")
+	.action((keyValue) => envSetCommand(keyValue));
 
-cli
-  .command("db list", "List databases")
-  .action(() => dbListCommand());
+env
+	.command("delete <key>")
+	.description("Delete an environment variable")
+	.action((key) => envDeleteCommand(key));
 
-cli
-  .command("db add <name>", "Create a new database")
-  .action((name) => dbAddCommand(name));
+const db = program
+	.command("db")
+	.description("Manage persistent database files");
 
-cli
-  .command("db remove <name>", "Remove a database")
-  .action((name) => dbRemoveCommand(name));
+db
+	.command("list")
+	.description("List databases")
+	.action(() => dbListCommand());
 
-cli
-  .command("token create", "Create a new token")
-  .option("--name <name>", "Token name", { default: "Unnamed" })
-  .option("--scope <scope>", "Token scope (rw or ro)", { default: "rw" })
-  .action((options) => tokenCreateCommand(options));
+db
+	.command("add <name>")
+	.description("Create a new database")
+	.action((name) => dbAddCommand(name));
 
-cli
-  .command("token list", "List all tokens")
-  .action(() => tokenListCommand());
+db
+	.command("remove <name>")
+	.description("Remove a database")
+	.action((name) => dbRemoveCommand(name));
 
-cli
-  .command("token revoke <id>", "Revoke a token")
-  .action((id) => tokenRevokeCommand(id));
+const token = program
+	.command("token")
+	.description("Manage auth tokens");
 
-cli.help();
-cli.version(pkg.version);
+token
+	.command("create")
+	.description("Create a new token")
+	.option("--name <name>", "Token name", "Unnamed")
+	.option("--scope <scope>", "Token scope (rw or ro)", "rw")
+	.action((options) => tokenCreateCommand(options));
 
-cli.parse();
+token
+	.command("list")
+	.description("List all tokens")
+	.action(() => tokenListCommand());
+
+token
+	.command("revoke <id>")
+	.description("Revoke a token")
+	.action((id) => tokenRevokeCommand(id));
+
+program.version(pkg.version);
+program.parse();

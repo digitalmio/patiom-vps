@@ -23,7 +23,7 @@ const readProjectConfig = async (cwd: string) => {
 		const raw = await fs.readFile(pkgPath, "utf-8");
 		return JSON.parse(raw);
 	} catch {
-		consola.error("package.json not found.");
+		consola.error("No package.json found. Run `patiom deploy` from your project directory.");
 		process.exit(1);
 	}
 };
@@ -120,7 +120,7 @@ const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => 
         timeout: POLL_TIMEOUT,
       });
 
-      logsResponse.lines.map((line) => console.log(`  ${line}`));
+      logsResponse.lines.forEach((line) => console.log(`  ${line}`));
       offset = logsResponse.nextOffset;
       done = logsResponse.done;
       if (logsResponse.status) {
@@ -143,7 +143,7 @@ const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => 
     const finalLogs = await api<LogsResponse>(`/logs/${name}/${releaseId}?offset=${offset}`, {
       timeout: POLL_TIMEOUT,
     });
-    finalLogs.lines.map((line) => console.log(`  ${line}`));
+    finalLogs.lines.forEach((line) => console.log(`  ${line}`));
   } catch {
     // Final log fetch failed, but deploy is done
   }
@@ -161,13 +161,17 @@ export const deployCommand = async (options: DeployOptions) => {
 	getGlobalConfig();
 	const cwd = process.cwd();
   const pkg = await readProjectConfig(cwd);
-  const patiom: PatiomConfig = pkg.patiom ?? {};
-
-  if (!pkg.name) {
+	if (!pkg.name) {
 		consola.error("Missing 'name' field in package.json.");
 		process.exit(1);
 	}
 
+	if (!pkg.patiom) {
+		consola.error("This project hasn't been initialized for Patiom. Run `patiom init` first.");
+		process.exit(1);
+	}
+
+	const patiom: PatiomConfig = pkg.patiom;
 	const hasDomains = (patiom.domains?.length ?? 0) > 0;
 	const sslipEnabled = patiom.sslipDomain ?? false;
 	if (!hasDomains && !sslipEnabled) {
