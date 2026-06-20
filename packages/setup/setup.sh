@@ -51,6 +51,7 @@ eval "$(fnm env)"
 fnm install 24
 fnm default 24
 
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 echo "📦 Enabling pnpm via Corepack..."
 corepack enable pnpm
 
@@ -132,6 +133,7 @@ if [ -f "./daemon.tgz" ]; then
 else
     echo "📦 Downloading daemon from npm..."
     cd "$DAEMON_DIR"
+    echo '{"name":"patiom-daemon-install","private":true}' > package.json
     pnpm pack @patiom/daemon
     tar -xzf patiom-daemon-*.tgz --strip-components=1
     rm patiom-daemon-*.tgz
