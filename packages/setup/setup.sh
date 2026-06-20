@@ -127,4 +127,4 @@ echo ""
 echo "🚀 Launching interactive setup..."
 echo ""
 
-exec patiom-server setup
+exec patiom-server setup </dev/tty
