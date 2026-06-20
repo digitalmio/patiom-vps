@@ -124,7 +124,7 @@ mkdir -p /etc/rpxy
 # ==========================================
 echo "📦 Installing Patiom daemon..."
 pnpm config set global-bin-dir /usr/local/bin
-pnpm install -g @patiom/daemon@latest
+pnpm install -g @patiom/daemon@latest --force
 
 # ==========================================
 # STEP 6: Hand off to Node setup
