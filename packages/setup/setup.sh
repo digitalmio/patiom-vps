@@ -123,8 +123,11 @@ mkdir -p /etc/rpxy
 # STEP 5: Install Patiom Daemon
 # ==========================================
 echo "📦 Installing Patiom daemon..."
+DAEMON_VERSION=$(curl -s https://registry.npmjs.org/@patiom/daemon/latest | jq -r .version)
+echo "   Latest version: $DAEMON_VERSION"
 pnpm config set global-bin-dir /usr/local/bin
-pnpm install -g @patiom/daemon@latest --force
+pnpm remove -g @patiom/daemon 2>/dev/null || true
+pnpm install -g "https://registry.npmjs.org/@patiom/daemon/-/daemon-${DAEMON_VERSION}.tgz"
 
 # ==========================================
 # STEP 6: Hand off to Node setup
