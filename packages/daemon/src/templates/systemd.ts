@@ -55,7 +55,7 @@ After=network.target
 
 [Service]
 Type=exec
-ExecStart=${nodeBinPath}/patiom-server serve
+ExecStart=/usr/local/bin/patiom-server serve
 Restart=always
 Environment=PORT=${port}
 Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

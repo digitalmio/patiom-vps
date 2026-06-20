@@ -117,6 +117,7 @@ mkdir -p /etc/rpxy
 # STEP 5: Install Patiom Daemon
 # ==========================================
 echo "📦 Installing Patiom daemon..."
+pnpm config set global-bin-dir /usr/local/bin
 pnpm install -g @patiom/daemon
 
 # ==========================================

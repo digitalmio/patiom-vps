@@ -5,9 +5,12 @@ export default defineConfig({
   format: "esm",
   platform: "node",
   target: "node20",
-  banner: { js: "#!/usr/bin/env node" },
   dts: false,
   outDir: "dist",
+  outputOptions: {
+    banner: "#!/usr/bin/env node",
+  },
+  onSuccess: "chmod +x dist/index.js",
   deps: {
     neverBundle: ["esbuild"],
   },

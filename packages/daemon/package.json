@@ -1,9 +1,9 @@
 {
   "name": "@patiom/daemon",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "bin": {
-    "patiom-server": "./dist/index.js"
+    "patiom-server": "dist/index.js"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts serve --devSkipRootCheck",
