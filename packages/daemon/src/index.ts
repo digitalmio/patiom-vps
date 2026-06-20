@@ -10,7 +10,10 @@ import { restart } from "./core/systemd";
 
 consola.options.formatOptions = { date: false };
 
-const checkRoot = () => {
+const skipRootOpt = "--devSkipRootCheck";
+
+const checkRoot = (skip?: boolean) => {
+  if (skip) return;
   if (process.getuid?.() !== 0) {
     consola.error(
       "This command must be run as root. Try: sudo patiom-server <command>",
@@ -26,24 +29,27 @@ program
 program
   .command("serve")
   .description("Start the daemon HTTP server")
-  .action(() => {
-    checkRoot();
+  .option(skipRootOpt, "Skip root check for development")
+  .action((options) => {
+    checkRoot(options.devSkipRootCheck);
     startServer();
   });
 
 program
   .command("setup")
   .description("Interactive first-time server setup")
-  .action(() => {
-    checkRoot();
+  .option(skipRootOpt, "Skip root check for development")
+  .action((options) => {
+    checkRoot(options.devSkipRootCheck);
     return runSetup();
   });
 
 program
   .command("upgrade")
   .description("Update the daemon package and restart the service")
-  .action(async () => {
-    checkRoot();
+  .option(skipRootOpt, "Skip root check for development")
+  .action(async (options) => {
+    checkRoot(options.devSkipRootCheck);
     consola.info(`Current version: ${pkg.version}`);
 
     let latest: string | null = null;

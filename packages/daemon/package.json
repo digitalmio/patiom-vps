@@ -6,7 +6,7 @@
     "patiom-server": "./dist/index.js"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts serve",
+    "dev": "tsx watch src/index.ts serve --devSkipRootCheck",
     "build": "tsdown"
   },
   "files": [
