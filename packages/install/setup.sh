@@ -58,7 +58,7 @@ fnm install 24
 fnm default 24
 
 echo "🟩 Creating symlinks in /usr/local/bin..."
-NODE_BIN_DIR=$(dirname "$(which node)")
+NODE_BIN_DIR=$(dirname "$(readlink -f "$(which node)")")
 ln -sf "$NODE_BIN_DIR/node" /usr/local/bin/node
 ln -sf "$NODE_BIN_DIR/npm" /usr/local/bin/npm
 ln -sf "$NODE_BIN_DIR/npx" /usr/local/bin/npx

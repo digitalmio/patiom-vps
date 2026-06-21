@@ -13,7 +13,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=exec
 WorkingDirectory=${PATIOM_ROOT}/apps/%p/current
-ExecStart=npm run ${startScript}
+ExecStart=/usr/local/bin/npm run ${startScript}
 Restart=always
 RestartSec=5
 EnvironmentFile=${PATIOM_ROOT}/apps/%p/shared/.env
