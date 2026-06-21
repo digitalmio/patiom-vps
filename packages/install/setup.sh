@@ -79,39 +79,12 @@ else
     exit 1
 fi
 
-echo "🔍 Fetching rpxy latest release..."
-RELEASE_JSON=$(curl -s --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 30 \
-  https://api.github.com/repos/junkurihara/rust-rpxy/releases/latest || true)
-
-RPXY_TAG=$(printf '%s' "$RELEASE_JSON" | jq -r .tag_name 2>/dev/null || true)
-if [ -z "$RPXY_TAG" ] || [ "$RPXY_TAG" = "null" ]; then
-    echo "❌ Failed to fetch rpxy release info."
-    exit 1
-fi
-
-RPXY_URL=$(printf '%s' "$RELEASE_JSON" | jq -r --arg pat "$RPXY_PATTERN" '.assets[] | select(.name == "rpxy-\($pat).tar.gz") | .browser_download_url' 2>/dev/null || true)
-RPXY_SHA=$(printf '%s' "$RELEASE_JSON" | jq -r --arg pat "$RPXY_PATTERN" '.assets[] | select(.name == "rpxy-\($pat).tar.gz") | .digest' 2>/dev/null | sed 's/^sha256://' || true)
-
-if [ -z "$RPXY_URL" ] || [ "$RPXY_URL" = "null" ]; then
-    echo "❌ No matching rpxy asset found."
-    exit 1
-fi
-
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-echo "📥 Downloading rpxy $RPXY_TAG..."
-curl -sfSL -o "$TMPDIR/rpxy.tar.gz" "$RPXY_URL"
-
-if [ -n "$RPXY_SHA" ] && [ "$RPXY_SHA" != "null" ]; then
-    EXPECTED_SHA=$(echo "$RPXY_SHA" | tr -d '[:space:]')
-    ACTUAL_SHA=$(sha256sum "$TMPDIR/rpxy.tar.gz" | awk '{print $1}')
-    if [ "$EXPECTED_SHA" != "$ACTUAL_SHA" ]; then
-        echo "❌ rpxy SHA256 mismatch!"
-        exit 1
-    fi
-    echo "✅ rpxy integrity verified"
-fi
+echo "📥 Downloading rpxy latest..."
+curl -sfL --retry 3 --retry-delay 2 -o "$TMPDIR/rpxy.tar.gz" \
+  "https://github.com/junkurihara/rust-rpxy/releases/latest/download/rpxy-${RPXY_PATTERN}.tar.gz"
 
 tar -xzf "$TMPDIR/rpxy.tar.gz" -C "$TMPDIR"
 RPXY_BIN=$(find "$TMPDIR" -name 'rpxy*' -not -name '*.tar.gz' -type f | head -1)
