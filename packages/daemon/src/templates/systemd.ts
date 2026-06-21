@@ -56,11 +56,13 @@ type DaemonTemplateParams = {
 export const daemonServiceTemplate = ({ nodeBinPath, port }: DaemonTemplateParams) => `[Unit]
 Description=Patiom Daemon
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=exec
-ExecStart=/usr/local/bin/patiom-server serve
+ExecStart=${nodeBinPath}/patiom-server serve
 Restart=always
+RestartSec=5
 Environment=PORT=${port}
 Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
