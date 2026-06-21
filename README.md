@@ -82,13 +82,18 @@ Pick whichever URL you prefer — both serve the identical `setup.sh`:
 
 ```bash
 # install.patiom.dev (our CDN)
-curl -sSL https://install.patiom.dev/setup.sh | sudo EMAIL=you@example.com bash
+curl -sSL https://install.patiom.dev/setup.sh | sudo bash
 
 # GitHub raw (if you'd rather skip our host)
-curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/install/setup.sh | sudo EMAIL=you@example.com bash
+curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/install/setup.sh | sudo bash
 ```
 
-This installs fnm + Node 24 + pnpm, the rpxy reverse proxy, and the Patiom daemon, and sets up Let's Encrypt for SSL. At the end, you'll get a **master token** — store it safely.
+The script prompts for your email (for Let's Encrypt). Or set `EMAIL` for non-interactive:
+```bash
+curl -sSL https://install.patiom.dev/setup.sh | sudo EMAIL=you@example.com bash
+```
+
+This installs fnm + Node 24 + npm, the rpxy reverse proxy, and the Patiom daemon, and sets up Let's Encrypt for SSL. At the end, you'll get a **master token** — store it safely.
 
 > **Firewall:** Make sure ports 22 (SSH), 80 (HTTP), 443 (HTTPS), and 4000 (daemon) are open.
 >

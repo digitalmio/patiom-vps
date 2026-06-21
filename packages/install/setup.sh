@@ -10,9 +10,7 @@ echo "🚀 Patiom Server Bootstrap"
 echo ""
 
 if [ -z "$EMAIL" ]; then
-    echo "❌ Email is required for Let's Encrypt certificates."
-    echo "   Usage: curl -sSL https://... | sudo EMAIL=you@example.com bash"
-    exit 1
+    read -p "📧 Email for Let's Encrypt certificates: " EMAIL < /dev/tty
 fi
 
 # ==========================================
