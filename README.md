@@ -78,14 +78,14 @@ Patiom moves your project from your machine to your server using nothing but `pa
 
 ### 1. Server setup (one command)
 
+Pick whichever URL you prefer — both serve the identical `setup.sh`:
+
 ```bash
-```bash
-# Option A: install.patiom.dev
+# install.patiom.dev (our CDN)
 curl -sSL https://install.patiom.dev/setup.sh | sudo EMAIL=you@example.com bash
 
-# Option B: GitHub
+# GitHub raw (if you'd rather skip our host)
 curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/install/setup.sh | sudo EMAIL=you@example.com bash
-```
 ```
 
 This installs fnm + Node 24 + pnpm, the rpxy reverse proxy, and the Patiom daemon, and sets up Let's Encrypt for SSL. At the end, you'll get a **master token** — store it safely.

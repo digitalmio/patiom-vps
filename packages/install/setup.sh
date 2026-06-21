@@ -57,9 +57,13 @@ eval "$(fnm env)"
 fnm install 24
 fnm default 24
 
-echo "📦 Installing pnpm standalone..."
-curl -fsSL https://get.pnpm.io/install.sh | env PNPM_HOME=/opt/pnpm sh -
-ln -sf /opt/pnpm/pnpm /usr/local/bin/pnpm
+echo "📦 Installing pnpm..."
+PNPM_VERSION=$(curl -s https://registry.npmjs.org/pnpm/latest | jq -r .version)
+mkdir -p /opt/pnpm
+curl -sSL "https://registry.npmjs.org/pnpm/-/pnpm-${PNPM_VERSION}.tgz" -o /tmp/pnpm.tgz
+tar -xzf /tmp/pnpm.tgz -C /opt/pnpm
+ln -sf /opt/pnpm/package/bin/pnpm.cjs /usr/local/bin/pnpm
+rm -f /tmp/pnpm.tgz
 
 # ==========================================
 # STEP 4: rpxy Binary
@@ -76,16 +80,17 @@ else
 fi
 
 echo "🔍 Fetching rpxy latest release..."
-RELEASE_JSON=$(curl -sf https://api.github.com/repos/junkurihara/rust-rpxy/releases/latest)
+RELEASE_JSON=$(curl -s --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 30 \
+  https://api.github.com/repos/junkurihara/rust-rpxy/releases/latest || true)
 
-RPXY_TAG=$(printf '%s' "$RELEASE_JSON" | jq -r .tag_name)
+RPXY_TAG=$(printf '%s' "$RELEASE_JSON" | jq -r .tag_name 2>/dev/null || true)
 if [ -z "$RPXY_TAG" ] || [ "$RPXY_TAG" = "null" ]; then
     echo "❌ Failed to fetch rpxy release info."
     exit 1
 fi
 
-RPXY_URL=$(printf '%s' "$RELEASE_JSON" | jq -r --arg pat "$RPXY_PATTERN" '.assets[] | select(.name == "rpxy-\($pat).tar.gz") | .browser_download_url')
-RPXY_SHA=$(printf '%s' "$RELEASE_JSON" | jq -r --arg pat "$RPXY_PATTERN" '.assets[] | select(.name == "rpxy-\($pat).tar.gz") | .digest' | sed 's/^sha256://')
+RPXY_URL=$(printf '%s' "$RELEASE_JSON" | jq -r --arg pat "$RPXY_PATTERN" '.assets[] | select(.name == "rpxy-\($pat).tar.gz") | .browser_download_url' 2>/dev/null || true)
+RPXY_SHA=$(printf '%s' "$RELEASE_JSON" | jq -r --arg pat "$RPXY_PATTERN" '.assets[] | select(.name == "rpxy-\($pat).tar.gz") | .digest' 2>/dev/null | sed 's/^sha256://' || true)
 
 if [ -z "$RPXY_URL" ] || [ "$RPXY_URL" = "null" ]; then
     echo "❌ No matching rpxy asset found."
