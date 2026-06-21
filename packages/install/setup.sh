@@ -57,6 +57,13 @@ eval "$(fnm env)"
 fnm install 24
 fnm default 24
 
+echo "🟩 Setting up fnm in /etc/profile.d/fnm.sh..."
+cat > /etc/profile.d/fnm.sh << 'EOF'
+export FNM_DIR="/opt/fnm"
+export PATH="$FNM_DIR:$PATH"
+eval "$(fnm env)" 2>/dev/null
+EOF
+
 echo "📦 Installing pnpm..."
 PNPM_VERSION=$(curl -s https://registry.npmjs.org/pnpm/latest | jq -r .version)
 rm -rf /opt/pnpm
