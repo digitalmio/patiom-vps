@@ -62,6 +62,7 @@ PNPM_VERSION=$(curl -s https://registry.npmjs.org/pnpm/latest | jq -r .version)
 mkdir -p /opt/pnpm
 curl -sSL "https://registry.npmjs.org/pnpm/-/pnpm-${PNPM_VERSION}.tgz" -o /tmp/pnpm.tgz
 tar -xzf /tmp/pnpm.tgz -C /opt/pnpm
+chmod +x /opt/pnpm/package/bin/pnpm.cjs
 ln -sf /opt/pnpm/package/bin/pnpm.cjs /usr/local/bin/pnpm
 rm -f /tmp/pnpm.tgz
 
