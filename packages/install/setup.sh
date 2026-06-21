@@ -57,6 +57,12 @@ eval "$(fnm env)"
 fnm install 24
 fnm default 24
 
+echo "🟩 Creating symlinks in /usr/local/bin..."
+NODE_BIN_DIR=$(dirname "$(which node)")
+ln -sf "$NODE_BIN_DIR/node" /usr/local/bin/node
+ln -sf "$NODE_BIN_DIR/npm" /usr/local/bin/npm
+ln -sf "$NODE_BIN_DIR/npx" /usr/local/bin/npx
+
 echo "🟩 Setting up fnm in /etc/profile.d/fnm.sh..."
 cat > /etc/profile.d/fnm.sh << 'EOF'
 export FNM_DIR="/opt/fnm"
@@ -104,6 +110,7 @@ mkdir -p /etc/rpxy
 echo "📦 Installing Patiom daemon..."
 npm uninstall -g @patiom/daemon 2>/dev/null || true
 npm install -g @patiom/daemon@latest
+ln -sf "$(npm root -g)/../bin/patiom-server" /usr/local/bin/patiom-server
 
 # ==========================================
 # STEP 6: Hand off to Node setup

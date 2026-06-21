@@ -60,7 +60,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=exec
-ExecStart=${nodeBinPath}/patiom-server serve
+ExecStart=/usr/local/bin/patiom-server serve
 Restart=always
 RestartSec=5
 Environment=PORT=${port}
