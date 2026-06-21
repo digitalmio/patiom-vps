@@ -4,9 +4,9 @@ import { execa } from "execa";
 
 export type Logger = (msg: string) => void;
 
-export const hasLockfile = async (releaseDir: string): Promise<boolean> => {
+const hasPackageLock = async (releaseDir: string): Promise<boolean> => {
   try {
-    await fs.access(path.join(releaseDir, "pnpm-lock.yaml"));
+    await fs.access(path.join(releaseDir, "package-lock.json"));
     return true;
   } catch {
     return false;
@@ -14,14 +14,14 @@ export const hasLockfile = async (releaseDir: string): Promise<boolean> => {
 };
 
 export const install = async (releaseDir: string, log: Logger): Promise<void> => {
-  const frozen = await hasLockfile(releaseDir);
-  const args = frozen
-    ? ["install", "--frozen-lockfile", "--prod"]
-    : ["install", "--prod"];
+  const lockfile = await hasPackageLock(releaseDir);
+  const args = lockfile
+    ? ["ci", "--omit=dev"]
+    : ["install", "--omit=dev"];
 
-  log(`Running: pnpm ${args.join(" ")}`);
+  log(`Running: npm ${args.join(" ")}`);
 
-  const proc = execa("pnpm", args, {
+  const proc = execa("npm", args, {
     cwd: releaseDir,
     stdout: "pipe",
     stderr: "pipe",

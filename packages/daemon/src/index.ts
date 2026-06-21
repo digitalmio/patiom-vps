@@ -59,8 +59,8 @@ program
 
     let latest: string | null = null;
     try {
-      const { stdout } = await execa("pnpm", [
-        "info",
+      const { stdout } = await execa("npm", [
+        "view",
         "@patiom/daemon",
         "version",
       ]);
@@ -79,8 +79,8 @@ program
     }
 
     consola.start("Updating @patiom/daemon...");
-    await execa("pnpm", ["remove", "-g", "@patiom/daemon"]);
-    await execa("pnpm", ["install", "-g", "@patiom/daemon@latest"]);
+    await execa("npm", ["uninstall", "-g", "@patiom/daemon"]);
+    await execa("npm", ["install", "-g", "@patiom/daemon@latest"]);
     const pkgPath = path.resolve(import.meta.dirname, "..", "package.json");
     const newVersion = JSON.parse(readFileSync(pkgPath, "utf-8")).version;
     consola.success(`Updated to ${newVersion}`);

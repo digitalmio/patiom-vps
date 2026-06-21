@@ -15,7 +15,7 @@ export const archive = async ({
 }: ArchiveOptions): Promise<Buffer> => {
 	let hasLockfile = false;
 	try {
-		await fs.access(path.join(cwd, "pnpm-lock.yaml"));
+		await fs.access(path.join(cwd, "package-lock.json"));
 		hasLockfile = true;
 	} catch {
 		// no lockfile
@@ -37,7 +37,7 @@ export const archive = async ({
 		zip.file(path.join(cwd, "package.json"), { name: "package.json" });
 
 		if (hasLockfile) {
-			zip.file(path.join(cwd, "pnpm-lock.yaml"), { name: "pnpm-lock.yaml" });
+			zip.file(path.join(cwd, "package-lock.json"), { name: "package-lock.json" });
 		}
 
 		files.forEach((file) =>

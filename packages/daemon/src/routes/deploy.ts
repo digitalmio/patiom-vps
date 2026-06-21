@@ -7,9 +7,9 @@ import {
   swapCurrentSymlink,
   getReleasesDir,
 } from "../core/releases";
-import { install } from "../core/pnpm";
+import { install } from "../core/pm";
 import { allocatePortBlock } from "../core/ports";
-import { enable, start, stop, daemonReload, listRunningInstances } from "../core/systemd";
+import { enable, start, stop, restart, daemonReload, listRunningInstances } from "../core/systemd";
 import { addApp, removeApp } from "../core/proxy";
 import { ensureEnvFile } from "../core/env";
 import { ensureStorageDir } from "../core/storage";
@@ -193,7 +193,7 @@ const executeDeploy = async (
 
   await log("Detecting start script...");
   const startScript = await getStartScript(releaseDir);
-  await log(`Using start script: pnpm run ${startScript}`);
+  await log(`Using start script: npm run ${startScript}`);
 
   await log("Writing systemd unit file...");
   await writeUnitFile(name, startScript);
@@ -215,6 +215,8 @@ const executeDeploy = async (
 
   if (allDomains.length > 0) {
     await updateRpxyConfig(name, allDomains, ports, log);
+    log("Restarting rpxy...");
+    await restart("rpxy");
   }
 
   await log(`Deployment complete!`);

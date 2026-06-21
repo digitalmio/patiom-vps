@@ -44,7 +44,7 @@ else
 fi
 
 # ==========================================
-# STEP 3: fnm, Node, pnpm
+# STEP 3: fnm, Node, npm
 # ==========================================
 export FNM_DIR="/opt/fnm"
 if ! command -v fnm &>/dev/null; then
@@ -64,19 +64,7 @@ export PATH="$FNM_DIR:$PATH"
 eval "$(fnm env)" 2>/dev/null
 EOF
 
-echo "📦 Installing pnpm..."
-PNPM_VERSION=$(curl -s https://registry.npmjs.org/pnpm/latest | jq -r .version)
-rm -rf /opt/pnpm
-mkdir -p /opt/pnpm
-curl -sSL "https://registry.npmjs.org/pnpm/-/pnpm-${PNPM_VERSION}.tgz" -o /tmp/pnpm.tgz
-tar -xzf /tmp/pnpm.tgz -C /opt/pnpm
-rm -f /usr/local/bin/pnpm
-cat > /usr/local/bin/pnpm << 'EOF'
-#!/bin/sh
-exec node /opt/pnpm/package/bin/pnpm.cjs "$@"
-EOF
-chmod +x /usr/local/bin/pnpm
-rm -f /tmp/pnpm.tgz
+# npm ships with Node, no separate installation needed
 
 # ==========================================
 # STEP 4: rpxy Binary
@@ -114,11 +102,8 @@ mkdir -p /etc/rpxy
 # STEP 5: Install Patiom Daemon
 # ==========================================
 echo "📦 Installing Patiom daemon..."
-pnpm config set global-bin-dir /usr/local/bin
-pnpm config set minimumReleaseAgeExclude '@patiom/*'
-pnpm config set verifyDepsBeforeRun false
-pnpm remove -g @patiom/daemon 2>/dev/null || true
-pnpm install -g @patiom/daemon@latest
+npm uninstall -g @patiom/daemon 2>/dev/null || true
+npm install -g @patiom/daemon@latest
 
 # ==========================================
 # STEP 6: Hand off to Node setup

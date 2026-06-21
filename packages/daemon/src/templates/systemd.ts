@@ -8,15 +8,16 @@ type AppTemplateParams = {
 export const appServiceTemplate = ({ nodeBinPath, startScript }: AppTemplateParams) => `[Unit]
 Description=Patiom App: %p (port %i)
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=exec
 WorkingDirectory=${PATIOM_ROOT}/apps/%p/current
-ExecStart=/usr/local/bin/pnpm run ${startScript}
+ExecStart=npm run ${startScript}
 Restart=always
+RestartSec=5
 EnvironmentFile=${PATIOM_ROOT}/apps/%p/shared/.env
 Environment=PORT=%i
-Environment=npm_config_verifyDepsBeforeRun=false
 Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 DynamicUser=yes
@@ -35,10 +36,12 @@ type RpxyTemplateParams = {
 export const rpxyServiceTemplate = ({ rpxyBinPath }: RpxyTemplateParams) => `[Unit]
 Description=rpxy Reverse Proxy
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=${rpxyBinPath} --config /etc/rpxy/config.toml
 Restart=always
+RestartSec=5
 LimitNOFILE=65536
 
 [Install]

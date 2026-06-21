@@ -16,4 +16,4 @@
 
 ## Package Manager Strategy
 - CLI: Detect and use any package manager (npm/yarn/pnpm) for local builds
-- Daemon: Use pnpm only for server-side dependency installation
+- Daemon: Use npm only for server-side dependency installation
