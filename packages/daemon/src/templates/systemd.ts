@@ -16,6 +16,7 @@ ExecStart=/usr/local/bin/pnpm run ${startScript}
 Restart=always
 EnvironmentFile=${PATIOM_ROOT}/apps/%p/shared/.env
 Environment=PORT=%i
+Environment=npm_config_verifyDepsBeforeRun=false
 Environment=PATH=${nodeBinPath}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 DynamicUser=yes
