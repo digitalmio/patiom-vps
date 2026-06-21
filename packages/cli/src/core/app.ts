@@ -2,6 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { consola } from "consola";
 
+export const sanitizeAppName = (name: string): string =>
+  name.replace(/^@[^/]+\//u, "").replaceAll(/[^a-zA-Z0-9._-]/gu, "-");
+
 export const getAppName = async (): Promise<string> => {
   const cwd = process.cwd();
   const pkgPath = path.join(cwd, "package.json");
@@ -20,7 +23,7 @@ export const getAppName = async (): Promise<string> => {
       process.exit(1);
     }
 
-    return pkg.name;
+    return pkg.patiom.name ?? sanitizeAppName(pkg.name);
   } catch {
     consola.error("No package.json found in the current directory. Run this from a project folder.");
     process.exit(1);

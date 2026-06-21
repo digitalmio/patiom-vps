@@ -107,6 +107,28 @@ importers:
         specifier: ^5.8.0
         version: 5.9.3
 
+  packages/install:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^2.0.4
+        version: 2.0.4(hono@4.12.23)
+      hono:
+        specifier: ^4.12.23
+        version: 4.12.23
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      tsdown:
+        specifier: ^0.12.0
+        version: 0.12.9(typescript@5.9.3)
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
 packages:
 
   '@babel/code-frame@7.29.7':

@@ -57,9 +57,9 @@ eval "$(fnm env)"
 fnm install 24
 fnm default 24
 
-export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-echo "📦 Enabling pnpm via Corepack..."
-corepack enable pnpm
+echo "📦 Installing pnpm standalone..."
+curl -fsSL https://get.pnpm.io/install.sh | env PNPM_HOME=/opt/pnpm sh -
+ln -sf /opt/pnpm/pnpm /usr/local/bin/pnpm
 
 # ==========================================
 # STEP 4: rpxy Binary

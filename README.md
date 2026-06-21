@@ -79,7 +79,13 @@ Patiom moves your project from your machine to your server using nothing but `pa
 ### 1. Server setup (one command)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/setup/setup.sh | sudo EMAIL=you@example.com bash
+```bash
+# Option A: install.patiom.dev
+curl -sSL https://install.patiom.dev/setup.sh | sudo EMAIL=you@example.com bash
+
+# Option B: GitHub
+curl -sSL https://raw.githubusercontent.com/digitalmio/patiom/main/packages/install/setup.sh | sudo EMAIL=you@example.com bash
+```
 ```
 
 This installs fnm + Node 24 + pnpm, the rpxy reverse proxy, and the Patiom daemon, and sets up Let's Encrypt for SSL. At the end, you'll get a **master token** — store it safely.
@@ -140,6 +146,7 @@ patiom token       Manage auth tokens (create, list, revoke)
 
 | Field | Default | Description |
 |-------|---------|-------------|
+| `name` | *(from `package.json`)* | Override the app name (auto-sanitized from scoped packages, e.g. `@scope/name` → `name`) |
 | `include` | `[]` | Files and directories to bundle in the deployment archive |
 | `domains` | `[]` | Custom domain names (optional) |
 | `sslipDomain` | `false` | Auto-assign a free `{name}.{ip}.sslip.io` subdomain (optional) |
@@ -358,7 +365,7 @@ patiom/
 ├── packages/
 │   ├── cli/        @patiom/cli — developer tool
 │   ├── daemon/     @patiom/daemon — server agent
-│   └── setup/      setup.sh — server bootstrap script
+│   └── install/    @patiom/install — install.patiom.dev static host
 ├── pnpm-workspace.yaml
 └── package.json
 ```

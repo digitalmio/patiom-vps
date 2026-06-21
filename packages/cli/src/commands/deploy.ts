@@ -8,6 +8,7 @@ import { resolveCommand } from "package-manager-detector/commands";
 import type { PatiomConfig } from "../types";
 import { archive } from "../core/archive";
 import { getGlobalConfig, createApiClient } from "../core/api";
+import { sanitizeAppName } from "../core/app";
 
 const execAsync = promisify(exec);
 
@@ -172,6 +173,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	}
 
 	const patiom: PatiomConfig = pkg.patiom;
+	const appName = patiom.name ?? sanitizeAppName(pkg.name);
 	const hasDomains = (patiom.domains?.length ?? 0) > 0;
 	const sslipEnabled = patiom.sslipDomain ?? false;
 	if (!hasDomains && !sslipEnabled) {
@@ -191,7 +193,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	consola.success(`Archive created (${(zipBuffer.length / 1024).toFixed(1)} KB)`);
 
 	if (options.dryRun) {
-		const dryRunPath = path.join(cwd, ".patiom", `${pkg.name}.zip`);
+		const dryRunPath = path.join(cwd, ".patiom", `${appName}.zip`);
 		await fs.mkdir(path.dirname(dryRunPath), { recursive: true });
 		await fs.writeFile(dryRunPath, zipBuffer);
 		consola.info(`Dry run complete. Archive saved to ${dryRunPath}`);
@@ -200,7 +202,7 @@ export const deployCommand = async (options: DeployOptions) => {
 	}
 
 	try {
-    await upload(pkg.name, zipBuffer, patiom);
+    await upload(appName, zipBuffer, patiom);
 		console.log("");
 		consola.success("Deployment complete.");
 		console.log("");

@@ -1,4 +1,5 @@
 export type PatiomConfig = {
+  name?: string;
   include?: string[];
   domains?: string[];
   sslipDomain?: boolean;
