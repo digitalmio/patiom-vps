@@ -108,7 +108,7 @@ mkdir -p /etc/rpxy
 echo "📦 Installing Patiom daemon..."
 npm uninstall -g @patiom/daemon 2>/dev/null || true
 npm install -g @patiom/daemon@latest
-ln -sf "$(npm root -g)/../bin/patiom-server" /usr/local/bin/patiom-server
+ln -sf "$NODE_BIN_DIR/patiom-server" /usr/local/bin/patiom-server
 
 # ==========================================
 # STEP 6: Hand off to Node setup
