@@ -9,6 +9,8 @@ import { dbRoute } from "./routes/db";
 import { appsRoute } from "./routes/apps";
 import { logsRoute } from "./routes/logs";
 import { tokensRoute } from "./routes/tokens";
+import { statusRoute } from "./routes/status";
+import { systemRoute } from "./routes/system";
 
 const app = new Hono();
 
@@ -32,6 +34,8 @@ app.route("/db", dbRoute);
 app.route("/apps", appsRoute);
 app.route("/logs", logsRoute);
 app.route("/tokens", tokensRoute);
+app.route("/status", statusRoute);
+app.route("/system", systemRoute);
 
 export const startServer = () => {
 	serve({

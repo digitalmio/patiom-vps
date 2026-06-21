@@ -1,5 +1,6 @@
 const SAFE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/u;
 const ULID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/u;
+const RESERVED_NAMES = new Set(["rpxy", "daemon", "patiom", "patiom-server", "system", "status"]);
 
 export const validateAppName = (name: string): void => {
   if (!name || !SAFE_NAME_PATTERN.test(name)) {
@@ -7,6 +8,9 @@ export const validateAppName = (name: string): void => {
   }
   if (name.includes("..") || name.includes("/") || name.includes("\\")) {
     throw new Error("Invalid app name. Path traversal characters are not allowed.");
+  }
+  if (RESERVED_NAMES.has(name.toLowerCase())) {
+    throw new Error(`'${name}' is a reserved name and cannot be used as an app name.`);
   }
 };
 

@@ -6,6 +6,8 @@ import { deployCommand } from "./commands/deploy";
 import { envSetCommand, envDeleteCommand } from "./commands/env";
 import { dbListCommand, dbAddCommand, dbRemoveCommand } from "./commands/db";
 import { tokenCreateCommand, tokenListCommand, tokenRevokeCommand } from "./commands/token";
+import { statusCommand } from "./commands/status";
+import { restartCommand } from "./commands/restart";
 import pkg from "../package.json" with { type: "json" };
 
 consola.options.formatOptions = { date: false };
@@ -32,6 +34,19 @@ program
 	.option("--prod", "Deploy to production (default)", true)
 	.option("--dry-run", "Build and zip locally without uploading", false)
 	.action((options) => deployCommand(options));
+
+program
+	.command("status")
+	.description("Show server status or app details")
+	.option("--app <name>", "Show status for a specific app")
+	.option("--server", "Show server overview (daemon, rpxy, ports)")
+	.option("--lines <n>", "Number of log lines per instance", (v) => parseInt(v, 10), 20)
+	.action((options) => statusCommand(options));
+
+program
+	.command("restart [target]")
+	.description("Restart a service (app name, 'rpxy', or 'daemon')")
+	.action((target) => restartCommand(target));
 
 const env = program
 	.command("env")
