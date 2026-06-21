@@ -108,6 +108,7 @@ mkdir -p /etc/rpxy
 # ==========================================
 echo "📦 Installing Patiom daemon..."
 pnpm config set global-bin-dir /usr/local/bin
+pnpm config set minimumReleaseAgeExclude '@patiom/*'
 pnpm remove -g @patiom/daemon 2>/dev/null || true
 pnpm install -g @patiom/daemon@latest
 
