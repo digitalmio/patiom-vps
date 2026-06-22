@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
+import { CACHE_DIR } from "../config";
 
 export type Logger = (msg: string) => void;
 
@@ -13,11 +14,15 @@ const hasPackageLock = async (releaseDir: string): Promise<boolean> => {
   }
 };
 
+const NPM_FLAGS = ["--no-audit", "--no-fund", "--prefer-offline", "--cache", CACHE_DIR];
+
 export const install = async (releaseDir: string, log: Logger): Promise<void> => {
+  await fs.mkdir(CACHE_DIR, { recursive: true });
+
   const lockfile = await hasPackageLock(releaseDir);
   const args = lockfile
-    ? ["ci", "--omit=dev"]
-    : ["install", "--omit=dev"];
+    ? ["ci", "--omit=dev", ...NPM_FLAGS]
+    : ["install", "--omit=dev", ...NPM_FLAGS];
 
   log(`Running: npm ${args.join(" ")}`);
 

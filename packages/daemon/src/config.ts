@@ -5,6 +5,8 @@ export const PATIOM_ROOT = "/var/lib/patiom";
 export const APPS_DIR = path.join(PATIOM_ROOT, "apps");
 export const IP_FILE = path.join(PATIOM_ROOT, "ip");
 
+export const CACHE_DIR = path.join(PATIOM_ROOT, "cache", "npm");
+
 export const PORT_MIN = 50000;
 export const PORT_MAX = 51000;
 
