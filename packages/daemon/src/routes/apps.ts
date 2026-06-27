@@ -6,7 +6,7 @@ import { requireScope } from "../middleware/scope";
 import { validateAppName } from "../core/validation";
 import { getCurrentRelease } from "../core/releases";
 import { listAllInstances, stop, start } from "../core/systemd";
-import { getServiceState, getServiceLogs } from "../core/diagnostics";
+import { getServiceState, getServiceLogs, getServiceLogsJson } from "../core/diagnostics";
 
 export const appsRoute = new Hono();
 
@@ -113,4 +113,55 @@ appsRoute.post("/:name/restart", requireScope("rw"), async (c) => {
   await Promise.all(ports.map((port) => start(`${name}@${port}`)));
 
   return c.json({ success: true, restarted: ports.map(Number) });
+});
+
+appsRoute.get("/:name/logs", async (c) => {
+  const name = c.req.param("name");
+  const lines = Math.max(1, Math.min(parseInt(c.req.query("lines") || "50", 10), 1000));
+  const portFilter = c.req.query("port");
+  let cursors: Record<string, string> = {};
+  try {
+    const raw = c.req.query("cursors");
+    if (raw) cursors = JSON.parse(raw);
+  } catch {
+    // malformed cursors, ignore
+  }
+
+  try {
+    validateAppName(name);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : "Invalid input" }, 400);
+  }
+
+  const ports = await listAllInstances(name);
+  const targetPorts = portFilter
+    ? ports.filter((p) => p === portFilter)
+    : ports;
+
+  if (targetPorts.length === 0) {
+    return c.json({ lines: [], cursors: {} });
+  }
+
+  const perInstance = await Promise.all(
+    targetPorts.map(async (port) => {
+      const cursor = cursors[port];
+      const entries = await getServiceLogsJson(`${name}@${port}`, cursor ? 100 : lines, cursor);
+      return { port, entries };
+    })
+  );
+
+  const allLines = perInstance
+    .flatMap(({ port, entries }) =>
+      entries.map((e) => ({ ts: e.ts, port: Number(port), message: e.message }))
+    )
+    .toSorted((a, b) => a.ts.localeCompare(b.ts));
+
+  const newCursors = Object.fromEntries(
+    perInstance.map(({ port, entries }) => {
+      const cursor = entries.length > 0 ? entries.at(-1)!.cursor : cursors[port];
+      return cursor ? [port, cursor] : null;
+    }).filter(Boolean)
+  );
+
+  return c.json({ lines: allLines, cursors: newCursors });
 });

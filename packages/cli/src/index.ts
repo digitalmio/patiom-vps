@@ -9,6 +9,7 @@ import { tokenCreateCommand, tokenListCommand, tokenRevokeCommand } from "./comm
 import { statusCommand } from "./commands/status";
 import { restartCommand } from "./commands/restart";
 import { metricsCommand } from "./commands/metrics";
+import { logsCommand } from "./commands/logs";
 import pkg from "../package.json" with { type: "json" };
 
 consola.options.formatOptions = { date: false };
@@ -48,6 +49,15 @@ program
 	.command("restart [target]")
 	.description("Restart a service (app name, 'rpxy', or 'daemon')")
 	.action((target) => restartCommand(target));
+
+program
+	.command("logs")
+	.description("View and follow runtime logs")
+	.option("--app <name>", "App name (default: from package.json)")
+	.option("--follow, -f", "Poll for new lines every 2s")
+	.option("--lines, -n <n>", "Number of lines per instance (default: 50)", (v) => parseInt(v, 10), 50)
+	.option("--port, -p <port>", "Filter to one instance")
+	.action((options) => logsCommand(options));
 
 program
 	.command("metrics")

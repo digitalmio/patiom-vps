@@ -9,7 +9,7 @@ Six features, plus a deferred web dashboard and optional Valkey instances (v0.4)
 | # | Feature | Scope | Dependencies |
 |---|---------|-------|-------------|
 | 1 | ✓ cli-table3 for table display (DONE, v0.0.11) | CLI only | None |
-| 2 | `patiom logs` command | Daemon + CLI | None |
+| 2 | ✓ `patiom logs` command (DONE, v0.0.12) | Daemon + CLI | None |
 | 3 | ✓ Server metrics (NDJSON, 60s) (DONE, v0.0.11) | Daemon only | None |
 | 4 | ✓ Per-app metrics (cgroup v2) (DONE, v0.0.11) | Daemon only | Item 3 (shared module) |
 | 5 | Cronjobs (systemd timers) | Daemon + CLI | Item 2 (log viewing) |
@@ -373,7 +373,7 @@ patiom valkey detach <app> <name> [--env-var REDIS_URL]
 
 ```
 v0.2   ✓ cli-table3 + output polish (DONE, v0.0.11)
-       patiom logs
+       ✓ patiom logs (DONE, v0.0.12)
        ✓ Server metrics (NDJSON, 60s) (DONE, v0.0.11)
        ✓ Per-app metrics (cgroup v2) (DONE, v0.0.11)
 
@@ -437,7 +437,7 @@ packages/daemon:   (none — valkey-server/redis-server installed via apt lazily
 
 ### New API endpoints
 ```
-GET  /apps/:name/logs             Runtime logs (init + cursor follow)
+GET  /apps/:name/logs             Runtime logs (init + cursor follow, merged + sorted per-instance)
 GET  /metrics/server              Server CPU/mem/load/disk over time
 GET  /metrics/apps                List all apps with metrics
 GET  /metrics/apps/:name          Per-app per-instance CPU/mem over time
@@ -452,7 +452,7 @@ POST /valkey/:name/detach         Detach Valkey from app (remove REDIS_URL)
 
 ### New CLI commands
 ```
-patiom logs [app] [--follow|-f] [--lines <n>] [--port <p>]
+patiom logs [--app <name>] [--follow|-f] [--lines <n>] [--port <p>]
 patiom cron list [--app <name>]
 patiom metrics [--app <name>] [--from <ISO>] [--to <ISO>]
 patiom valkey create <name> [--maxmemory 64mb] [--aof]
@@ -490,6 +490,20 @@ patiom valkey detach <app> <name> [--env-var REDIS_URL]
 - `server.ts` — mounts `/metrics` route, calls `startMetricsCollection()` at boot
 - `config.ts` — added `METRICS_DIR`, `METRICS_SERVER_DIR`, `METRICS_APPS_DIR`, `DEFAULT_METRICS_INTERVAL_MS`, `DEFAULT_METRICS_RETENTION_DAYS`
 - 60s sampling interval, NDJSON daily files, 365-day retention, cgroup v2 only
+
+### `patiom logs` command (v0.0.12)
+
+- `core/diagnostics.ts` — added `getServiceLogsJson(unit, lines, cursor?)` for JSON journalctl output with cursor-based follow
+- `routes/apps.ts` — added `GET /:name/logs` with `lines`, `port`, `cursors` query params
+  - Returns `{ lines: [{ts, port, message}], cursors: { port: cursor } }` — lines merged and sorted across instances
+  - Max 1000 lines daemon-side, caps at `Math.min(q.lines ?? 50, 1000)`
+  - Cursor follow: returns next lines after cursor with `--after-cursor=` flag
+- `cli/src/commands/logs.ts` — new CLI command: `patiom logs [--app <name>] [--follow] [--lines <n>] [--port <p>]`
+  - Display: `dim(HH:MM:SS) cyan([port]) message` — color-coded (error=red, warn=yellow)
+  - Follow mode: polls every 2s, sends `cursors` dict back to daemon
+  - SigInt handler on Ctrl+C for clean exit
+- `cli/src/index.ts` — registered `patiom logs` command
+- `cli/src/core/ui.ts` — added back `colorLogLine` function (was removed during dead code cleanup)
 
 ### npm install flags (pm.ts)
 

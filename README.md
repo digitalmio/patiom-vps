@@ -177,6 +177,7 @@ patiom init      Bootstrap a project for deployment
 patiom deploy    Build, zip, and upload your application
 patiom status    Show server overview or app details
 patiom restart   Restart a service (app, rpxy, or daemon)
+patiom logs      View runtime logs from journalctl (--follow to stream)
 patiom metrics   Show server or app CPU/memory metrics (last 1h)
 patiom db         Manage persistent database files
 patiom env         Manage environment variables (set, delete)

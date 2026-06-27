@@ -55,6 +55,14 @@ export const createTable = (headers: string[], rows: string[][], options?: Table
   return table.toString();
 };
 
+export const colorLogLine = (line: string): string => {
+  const lower = line.toLowerCase();
+  if (/error|fail/u.test(lower)) return pc.red(line);
+  if (/warn/u.test(lower)) return pc.yellow(line);
+  if (/^✓|success|done|complete|✔/u.test(lower)) return pc.green(line);
+  return line;
+};
+
 export const printTable = (headers: string[], rows: string[][], options?: TableOptions): void => {
   console.log("");
   console.log(createTable(headers, rows, options));
