@@ -8,10 +8,10 @@ Six features, plus a deferred web dashboard and optional Valkey instances (v0.4)
 
 | # | Feature | Scope | Dependencies |
 |---|---------|-------|-------------|
-| 1 | cli-table3 for table display | CLI only | None |
+| 1 | ✓ cli-table3 for table display (DONE, v0.0.11) | CLI only | None |
 | 2 | `patiom logs` command | Daemon + CLI | None |
-| 3 | Server metrics (CPU/mem/load/disk → NDJSON) | Daemon only | None |
-| 4 | Per-app metrics (per-instance CPU/mem via cgroup v2) | Daemon only | Item 3 (shared module) |
+| 3 | ✓ Server metrics (NDJSON, 60s) (DONE, v0.0.11) | Daemon only | None |
+| 4 | ✓ Per-app metrics (cgroup v2) (DONE, v0.0.11) | Daemon only | Item 3 (shared module) |
 | 5 | Cronjobs (systemd timers) | Daemon + CLI | Item 2 (log viewing) |
 | 6 | Web dashboard | **Deferred** | Items 2–5 |
 | 7 | Optional Valkey instances (top-level, per-app attach) | Daemon + CLI | None |
@@ -372,10 +372,10 @@ patiom valkey detach <app> <name> [--env-var REDIS_URL]
 ## Updated roadmap
 
 ```
-v0.2   cli-table3
+v0.2   ✓ cli-table3 + output polish (DONE, v0.0.11)
        patiom logs
-       Server metrics (NDJSON, 60s)
-       Per-app metrics (cgroup v2)
+       ✓ Server metrics (NDJSON, 60s) (DONE, v0.0.11)
+       ✓ Per-app metrics (cgroup v2) (DONE, v0.0.11)
 
 v0.3   Cronjobs (systemd timers, cron syntax)
 
@@ -401,7 +401,9 @@ v3.0+  Staging / preview deploys
 ```
 packages/cli/src/commands/logs.ts          — logs command logic
 packages/cli/src/commands/cron.ts          — cron list command
+packages/cli/src/commands/metrics.ts       — metrics CLI command
 packages/cli/src/commands/valkey.ts        — valkey CLI commands
+packages/cli/src/core/ui.ts                — shared formatting (stateColor, scopeColor, formatBytes, createTable, printTable)
 packages/daemon/src/core/metrics.ts        — server + per-app collection
 packages/daemon/src/core/timers.ts         — cron→OnCalendar converter
 packages/daemon/src/core/valkey.ts         — valkey lifecycle, install, config
@@ -412,21 +414,24 @@ packages/daemon/src/templates/valkey.ts    — valkey systemd unit + valkey.conf
 
 ### Modified files
 ```
-packages/cli/package.json                      — add cli-table3
-packages/cli/src/index.ts                      — register logs, cron, valkey commands
-packages/cli/src/commands/status.ts            — use cli-table3
-packages/cli/src/commands/token.ts             — use cli-table3
-packages/cli/src/commands/db.ts                — use cli-table3
+packages/cli/package.json                      — add cli-table3, picocolors
+packages/cli/src/index.ts                      — register logs, cron, metrics, valkey commands
+packages/cli/src/commands/status.ts            — use cli-table3, state colors, Promise.all, backward compat
+packages/cli/src/commands/token.ts             — use cli-table3, scope colors, highlighted token
+packages/cli/src/commands/db.ts                — use cli-table3 with sizes, backward compat
+packages/cli/src/commands/deploy.ts            — color-coded log lines, extracted printDeployLines
+packages/cli/src/commands/env.ts               — fix await createApiClient()
 packages/daemon/src/server.ts                  — mount metrics + valkey routes, start collection
-packages/daemon/src/routes/apps.ts             — add /logs endpoint
+packages/daemon/src/routes/apps.ts             — enrich GET / (app summary), add /logs endpoint
+packages/daemon/src/core/db.ts                 — enrich listDbs with getDirSize, DbInfo return type
 packages/daemon/src/routes/deploy.ts           — create timer units on deploy
 packages/daemon/src/templates/systemd.ts       — add timer + one-shot service templates
-packages/daemon/src/config.ts                  — add CACHE_DIR, METRICS_DIR, RETENTION_DAYS, VALKEY_DIR, DEFAULT_MAXMEMORY
+packages/daemon/src/config.ts                  — add CACHE_DIR, METRICS_DIR, METRICS_SERVER_DIR, METRICS_APPS_DIR, RETENTION_DAYS, VALKEY_DIR, DEFAULT_MAXMEMORY
 ```
 
 ### New dependencies
 ```
-packages/cli:      cli-table3
+packages/cli:      cli-table3, picocolors
 packages/daemon:   (none — valkey-server/redis-server installed via apt lazily)
 ```
 
@@ -434,6 +439,7 @@ packages/daemon:   (none — valkey-server/redis-server installed via apt lazily
 ```
 GET  /apps/:name/logs             Runtime logs (init + cursor follow)
 GET  /metrics/server              Server CPU/mem/load/disk over time
+GET  /metrics/apps                List all apps with metrics
 GET  /metrics/apps/:name          Per-app per-instance CPU/mem over time
 POST /valkey                      Create Valkey instance
 GET  /valkey                      List all Valkey instances
@@ -448,6 +454,7 @@ POST /valkey/:name/detach         Detach Valkey from app (remove REDIS_URL)
 ```
 patiom logs [app] [--follow|-f] [--lines <n>] [--port <p>]
 patiom cron list [--app <name>]
+patiom metrics [--app <name>] [--from <ISO>] [--to <ISO>]
 patiom valkey create <name> [--maxmemory 64mb] [--aof]
 patiom valkey destroy <name>
 patiom valkey restart <name>
@@ -459,6 +466,30 @@ patiom valkey detach <app> <name> [--env-var REDIS_URL]
 ---
 
 ## Recent changes to existing code
+
+### cli-table3 + output polish (v0.0.11)
+
+- `packages/cli/src/core/ui.ts` — new shared formatting module: `stateColor` (active=green, failed=red, inactive=yellow), `scopeColor` (master=magenta, rw=cyan, ro=dim), `formatBytes` (KB/MB/GB/ TB), `createTable` (wraps cli-table3), `printTable`
+- `packages/cli/package.json` — deps `cli-table3`, `picocolors`
+- `status.ts` — tables for apps/instances/ports, colored states, `Promise.all([/status, /apps])`, backward-compat for old daemon format (string[] → object[])
+- `token.ts` — table for list (Name / Scope / Created / Token), highlighted bold-green token on create
+- `db.ts` — table with human-readable sizes (Database / Size), backward-compat for old daemon format
+- `deploy.ts` — color-coded log lines (red=error, yellow=warn, green=success, dim=info), extracted `printDeployLines` helper
+- `env.ts` — removed unnecessary `await createApiClient()`
+- All spacing standardized — consistent `printTable` + `console.log("")` pattern
+
+### Enriched daemon endpoints (v0.0.11)
+
+- `/apps` GET / — now returns `[{name, currentRelease, lastDeployStatus, instanceStates, instanceCount, allActive}]` instead of `string[]`. Server-side iteration — no N+1.
+- `listDbs` — now returns `[{name, sizeBytes}]` with recursive directory size calculation instead of `string[]`.
+
+### Server + per-app metrics (v0.0.11)
+
+- `core/metrics.ts` — new module: `collectServerMetrics` (/proc/stat, /proc/meminfo, os.loadavg, fs.statfs), `collectAppMetrics` (cgroup v2 per-instance CPU/mem), `readMetricsRange`, `startMetricsCollection`
+- `routes/metrics.ts` — 3 endpoints: `GET /metrics/server`, `GET /metrics/apps`, `GET /metrics/apps/:name`
+- `server.ts` — mounts `/metrics` route, calls `startMetricsCollection()` at boot
+- `config.ts` — added `METRICS_DIR`, `METRICS_SERVER_DIR`, `METRICS_APPS_DIR`, `DEFAULT_METRICS_INTERVAL_MS`, `DEFAULT_METRICS_RETENTION_DAYS`
+- 60s sampling interval, NDJSON daily files, 365-day retention, cgroup v2 only
 
 ### npm install flags (pm.ts)
 
@@ -481,7 +512,7 @@ Cache dir is `mkdir`'d at the start of `install()` and managed via `CACHE_DIR` i
 | Dashboard hosting | TBD (`dash.patiom.dev` or `patiom studio` CLI command) | Will decide when we implement. |
 | Dashboard auth | Login form | Clean URLs, token never in browser history. |
 | NDJSON format | JSON-lines-per-minute, daily files | Simple, grepable, gz-able. No dependency. |
-| cgroup path | v2 primary, v1 fallback | Modern servers use v2. v1 fallback for compatibility. |
+| cgroup path | v2 only, skip v1 with warning | Modern servers (post-2020) all use cgroup v2. v1 adds ~30 lines for <1% of deployments. |
 | Cron configuration | In `package.json` under `patiom.cron` | Zero proprietary config files. Matches `domains`, `include`, etc. |
 | Cron scheduling syntax | Standard cron (5 fields) → systemd `OnCalendar=` | Cron is what users know. Power users can use raw `OnCalendar=` via `timer` field. |
 | Cron runtime | One-shot systemd service per task | Same DynamicUser, WorkingDirectory, EnvironmentFile as main app. Timer fires once regardless of instance count. |

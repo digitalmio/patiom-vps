@@ -177,7 +177,7 @@ patiom init      Bootstrap a project for deployment
 patiom deploy    Build, zip, and upload your application
 patiom status    Show server overview or app details
 patiom restart   Restart a service (app, rpxy, or daemon)
-patiom logs      View and follow runtime logs from journalctl
+patiom metrics   Show server or app CPU/memory metrics (last 1h)
 patiom db         Manage persistent database files
 patiom env         Manage environment variables (set, delete)
 patiom token       Manage auth tokens (create, list, revoke)
@@ -402,13 +402,24 @@ patiom login                                                         # interacti
 
 You'll be prompted for your daemon URL and auth token (or pass them as flags). Credentials are saved to your system config directory — the CLI prints the path on success.
 
+## Metrics
+
+The daemon collects server-wide and per-app CPU, memory, load, and disk usage every 60 seconds, stored as NDJSON files in `/var/lib/patiom/metrics/`. Retained for 365 days (configurable via `METRICS_RETENTION_DAYS` env var).
+
+```bash
+patiom metrics                          # server summary (last 1h)
+patiom metrics --app <name>              # per-app per-instance CPU/mem
+patiom metrics --from <ISO> --to <ISO>  # custom time window
+```
+
+Server view shows CPU %, memory usage, load averages, and disk. Per-app view shows each instance's CPU (now + 1h average) and memory.
+
 ## Coming in v2
 
 - **Cronjobs** — scheduled tasks defined in `package.json` (`patiom.cron`), run as systemd timer units. No new dependencies.
 - **Database backups** — local snapshots or push to S3-compatible storage. `patiom backup` and `patiom backup --s3`.
 - **Release pruning** — keep last N releases, automatically drop older ones.
 - **`patiom rollback`** — swap to the previous release in one command.
-- **`patiom metrics`** — view server and per-app CPU/memory usage over time.
 - **`instances: "maxcpu"`** — automatically scale to all available CPU cores.
 - **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Promote to live when ready.
 - **Multi-server support** — deploy to different servers from one config. `~/.config/patiom-nodejs/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
@@ -422,8 +433,11 @@ You'll be prompted for your daemon URL and auth token (or pass them as flags). C
 
 ## Coming in v3+
 
-- **Simple job queue** — a lightweight, SQLite-based queue for background jobs. No Redis, no BullMQ, no external infrastructure. Just a `.db` file in your app's `db/` folder. Workers run in your app process. `patiom queue list`, `patiom queue failed`, `patiom queue retry`. Inspired by BullMQ but designed for Patiom's bare-metal philosophy: one file, zero setup.
 - **`patiom studio`** — a Prisma Studio-style web dashboard (full management: status, logs, metrics, env, tokens, deploy). Served either as a CLI command (`patiom studio` opens a local web server + browser) or on its own domain.
+
+## Coming in v0.4
+
+- **Optional Valkey instances** — managed per-instance Valkey (or Redis-server) as isolated systemd units. `patiom valkey create/destroy/attach/detach`. Apps get `REDIS_URL` injected into their environment. Use BullMQ, ioredis, or any Redis-compatible library. Multiple apps can share one Valkey (worker + web sharing a queue). For file-based queues without Valkey, install [`workmatic`](https://npmjs.com/package/workmatic) against your existing `db/` folder — no Patiom changes needed.
 
 ## Monorepo structure
 
