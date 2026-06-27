@@ -4,7 +4,31 @@ import { getSharedDir } from "./releases";
 
 export type Logger = (msg: string) => void;
 
-export const listDbs = async (appName: string): Promise<string[]> => {
+export type DbInfo = {
+  name: string;
+  sizeBytes: number;
+};
+
+const getDirSize = async (dirPath: string): Promise<number> => {
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const sizes = await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          return getDirSize(entryPath);
+        }
+        const stat = await fs.stat(entryPath);
+        return stat.size;
+      })
+    );
+    return sizes.reduce((acc, s) => acc + s, 0);
+  } catch {
+    return 0;
+  }
+};
+
+export const listDbs = async (appName: string): Promise<DbInfo[]> => {
   const sharedDir = getSharedDir(appName);
 
   try {
@@ -17,9 +41,19 @@ export const listDbs = async (appName: string): Promise<string[]> => {
       })
     );
 
-    return entriesWithStats
+    const dbNames = entriesWithStats
       .filter(({ isDirectory }) => isDirectory)
       .map(({ entry }) => entry);
+
+    const dbs = await Promise.all(
+      dbNames.map(async (name) => {
+        const dbPath = path.join(sharedDir, name);
+        const sizeBytes = await getDirSize(dbPath);
+        return { name, sizeBytes };
+      })
+    );
+
+    return dbs;
   } catch {
     return [];
   }

@@ -8,6 +8,7 @@ import { dbListCommand, dbAddCommand, dbRemoveCommand } from "./commands/db";
 import { tokenCreateCommand, tokenListCommand, tokenRevokeCommand } from "./commands/token";
 import { statusCommand } from "./commands/status";
 import { restartCommand } from "./commands/restart";
+import { metricsCommand } from "./commands/metrics";
 import pkg from "../package.json" with { type: "json" };
 
 consola.options.formatOptions = { date: false };
@@ -47,6 +48,14 @@ program
 	.command("restart [target]")
 	.description("Restart a service (app name, 'rpxy', or 'daemon')")
 	.action((target) => restartCommand(target));
+
+program
+	.command("metrics")
+	.description("Show server or app metrics")
+	.option("--app <name>", "Show metrics for a specific app")
+	.option("--from <iso>", "Start time (ISO 8601, default: 1 hour ago)")
+	.option("--to <iso>", "End time (ISO 8601, default: now)")
+	.action((options) => metricsCommand(options));
 
 const env = program
 	.command("env")

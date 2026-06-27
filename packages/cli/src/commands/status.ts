@@ -1,39 +1,83 @@
 import { consola } from "consola";
+import pc from "picocolors";
 import { createApiClient } from "../core/api";
 import { getAppName } from "../core/app";
+import { stateColor, createTable, printTable } from "../core/ui";
 
 type StatusOptions = { app?: string; server?: boolean; lines?: number };
 
+type AppSummary = {
+  name: string;
+  currentRelease: string | null;
+  lastDeployStatus: string | null;
+  instanceStates: { port: number; state: string }[];
+  instanceCount: number;
+  allActive: boolean;
+};
+
+type ServerStatus = {
+  daemon: { version: string; uptime: number; port: number };
+  rpxy: { state: string; logs: string[] };
+  ports: string[];
+};
+
 const showServerOverview = async () => {
   const api = createApiClient();
-  const status = await api("/status");
+
+  const [status, apps] = await Promise.all([
+    api<ServerStatus>("/status"),
+    api<AppSummary[]>("/apps").catch(() => [] as AppSummary[]),
+  ]);
 
   console.log("");
-  consola.info(`Daemon v${status.daemon.version} (port ${status.daemon.port}, uptime ${Math.floor(status.daemon.uptime / 60)}m)`);
-  consola.info(`rpxy: ${status.rpxy.state}`);
-  if (status.rpxy.state !== "active" && status.rpxy.logs.length > 0) {
-    status.rpxy.logs.slice(-5).forEach((line: string) => console.log(`  ${line}`));
-  }
+  console.log(`  ${pc.bold(`Daemon v${status.daemon.version}`)}  port ${status.daemon.port}, uptime ${formatUptime(status.daemon.uptime)}`);
+  console.log(`  rpxy  ${stateColor(status.rpxy.state)}`);
+  console.log("");
 
-  let apps: string[];
-  try {
-    apps = await api("/apps");
-  } catch {
-    apps = [];
+  if (status.rpxy.state !== "active" && status.rpxy.logs.length > 0) {
+    status.rpxy.logs.slice(-5).forEach((line: string) => console.log(`    ${pc.dim(line)}`));
+    console.log("");
   }
 
   if (apps.length > 0) {
-    consola.info("Apps:");
-    apps.forEach((name: string) => console.log(`  ${name}`));
-  } else {
-    consola.info("No apps deployed");
+    let rows: string[][];
+    if (typeof apps[0] === "string") {
+      rows = (apps as string[]).map((name) => [name, pc.dim("—"), pc.dim("—"), pc.dim("—")]);
+    } else {
+      rows = (apps as AppSummary[]).map((app) => [
+        app.name,
+        app.currentRelease ? app.currentRelease.slice(0, 12) + "…" : pc.dim("—"),
+        app.lastDeployStatus ? stateColor(app.lastDeployStatus) : pc.dim("—"),
+        app.allActive
+          ? pc.green(`${app.instanceCount} active`)
+          : `${app.instanceCount} ${pc.red("inactive")}`,
+      ]);
+    }
+    printTable(["Name", "Release", "Status", "Instances"], rows);
+    console.log("");
   }
 
   if (status.ports.length > 0) {
-    consola.info("Listening ports:");
-    status.ports.forEach((line: string) => console.log(`  ${line}`));
+    const portRows = status.ports
+      .filter((line: string) => /LISTEN/u.test(line))
+      .map((line: string) => {
+        const fields = line.split(/\s+/u).filter(Boolean);
+        const addr = fields[3];
+        if (!addr) return null;
+        const port = addr.split(":").pop()!;
+        const processField = fields.at(-1)!;
+        const process = processField.match(/"([^"]+)"/u)?.[1] ?? processField;
+        return [port, process];
+      })
+      .filter(Boolean) as string[][];
+
+    if (portRows.length > 0) {
+      const portTable = createTable(["Port", "Process"], portRows, { colWidths: [12, 50] });
+      console.log(`  ${pc.bold("Listening ports")}`);
+      console.log(portTable);
+      console.log("");
+    }
   }
-  console.log("");
 };
 
 const showAppDetails = async (name: string, lines: number) => {
@@ -41,31 +85,50 @@ const showAppDetails = async (name: string, lines: number) => {
 
   let appStatus;
   try {
-    appStatus = await api(`/apps/${name}/status?lines=${lines}`);
+    appStatus = await api<{
+      name: string;
+      currentRelease: string | null;
+      lastDeploy: { status: string; releaseId: string } | null;
+      instances: { port: number; state: string; logs: string[] }[];
+    }>(`/apps/${name}/status?lines=${lines}`);
   } catch (error) {
     consola.error(`Failed to fetch status for '${name}': ${error instanceof Error ? error.message : error}`);
     process.exit(1);
   }
 
   console.log("");
-  consola.info(`App: ${appStatus.name}`);
+  console.log(`  ${pc.bold(`App: ${appStatus.name}`)}`);
+
   if (appStatus.currentRelease) {
-    console.log(`  Current release: ${appStatus.currentRelease}`);
+    console.log(`  ${pc.dim("release")}  ${appStatus.currentRelease}`);
   }
   if (appStatus.lastDeploy) {
-    console.log(`  Last deploy: ${appStatus.lastDeploy.status} (${appStatus.lastDeploy.releaseId})`);
+    const statusLabel = stateColor(appStatus.lastDeploy.status);
+    console.log(`  ${pc.dim("deploy")}  ${statusLabel} (${appStatus.lastDeploy.releaseId})`);
   }
+
+  console.log("");
+
   if (appStatus.instances.length > 0) {
-    appStatus.instances.forEach((inst: { port: number; state: string; logs: string[] }) => {
-      console.log(`  Port ${inst.port}: ${inst.state}`);
-      if (inst.logs.length > 0) {
-        inst.logs.forEach((line: string) => console.log(`    ${line}`));
-      }
-    });
+    const rows = appStatus.instances.map((inst) => [
+      String(inst.port),
+      stateColor(inst.state),
+      inst.logs.length > 0 ? pc.dim(inst.logs.at(-1)!.slice(0, 80)) : pc.dim("—"),
+    ]);
+
+    printTable(["Port", "State", "Last log"], rows, { colWidths: [10, 14, 80] });
   } else {
     consola.warn("No instances found");
   }
   console.log("");
+};
+
+const formatUptime = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return `${h}h ${rem}m`;
 };
 
 export const statusCommand = async (options: StatusOptions) => {

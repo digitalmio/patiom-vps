@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import pc from "picocolors";
 import { consola } from "consola";
 import { detect } from "package-manager-detector/detect";
 import { resolveCommand } from "package-manager-detector/commands";
@@ -74,6 +75,21 @@ const MAX_POLL_TIMEOUT = 10 * 60 * 1000;
 const POLL_INTERVAL = 500;
 const POLL_TIMEOUT = 5000;
 
+const printDeployLines = (lines: string[]): void => {
+  lines.forEach((line) => {
+    const lower = line.toLowerCase();
+    if (/error|fail/u.test(lower)) {
+      console.log(`  ${pc.red(line)}`);
+    } else if (/warn/u.test(lower)) {
+      console.log(`  ${pc.yellow(line)}`);
+    } else if (/^✓|success|done|complete|✔/u.test(lower)) {
+      console.log(`  ${pc.green(line)}`);
+    } else {
+      console.log(`  │ ${pc.dim(line)}`);
+    }
+  });
+};
+
 const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => {
   consola.start("Deploying to server...");
   console.log("");
@@ -121,7 +137,7 @@ const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => 
         timeout: POLL_TIMEOUT,
       });
 
-      logsResponse.lines.forEach((line) => console.log(`  ${line}`));
+      printDeployLines(logsResponse.lines);
       offset = logsResponse.nextOffset;
       done = logsResponse.done;
       if (logsResponse.status) {
@@ -144,7 +160,7 @@ const upload = async (name: string, zipBuffer: Buffer, patiom: PatiomConfig) => 
     const finalLogs = await api<LogsResponse>(`/logs/${name}/${releaseId}?offset=${offset}`, {
       timeout: POLL_TIMEOUT,
     });
-    finalLogs.lines.forEach((line) => console.log(`  ${line}`));
+    printDeployLines(finalLogs.lines);
   } catch {
     // Final log fetch failed, but deploy is done
   }

@@ -11,6 +11,8 @@ import { logsRoute } from "./routes/logs";
 import { tokensRoute } from "./routes/tokens";
 import { statusRoute } from "./routes/status";
 import { systemRoute } from "./routes/system";
+import { metricsRoute } from "./routes/metrics";
+import { startMetricsCollection } from "./core/metrics";
 
 const app = new Hono();
 
@@ -36,8 +38,10 @@ app.route("/logs", logsRoute);
 app.route("/tokens", tokensRoute);
 app.route("/status", statusRoute);
 app.route("/system", systemRoute);
+app.route("/metrics", metricsRoute);
 
 export const startServer = () => {
+  startMetricsCollection().catch((err) => console.error("Metrics collection failed to start:", err));
 	serve({
 		fetch: app.fetch,
 		port: Number(process.env.PORT) || 4000,

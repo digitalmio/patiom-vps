@@ -11,7 +11,7 @@ export const envSetCommand = async (keyValue: string) => {
 
   const key = keyValue.slice(0, eq);
   const value = keyValue.slice(eq + 1);
-  const api = await createApiClient();
+  const api = createApiClient();
   const appName = await getAppName();
 
   consola.start(`Setting ${key}...`);
@@ -29,7 +29,7 @@ export const envSetCommand = async (keyValue: string) => {
 };
 
 export const envDeleteCommand = async (key: string) => {
-  const api = await createApiClient();
+  const api = createApiClient();
   const appName = await getAppName();
 
   consola.start(`Deleting ${key}...`);

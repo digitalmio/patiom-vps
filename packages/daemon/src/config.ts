@@ -7,6 +7,12 @@ export const IP_FILE = path.join(PATIOM_ROOT, "ip");
 
 export const CACHE_DIR = path.join(PATIOM_ROOT, "cache", "npm");
 
+export const METRICS_DIR = path.join(PATIOM_ROOT, "metrics");
+export const METRICS_SERVER_DIR = path.join(METRICS_DIR, "server");
+export const METRICS_APPS_DIR = path.join(METRICS_DIR, "apps");
+export const DEFAULT_METRICS_INTERVAL_MS = 60_000;
+export const DEFAULT_METRICS_RETENTION_DAYS = 365;
+
 export const PORT_MIN = 50000;
 export const PORT_MAX = 51000;
 

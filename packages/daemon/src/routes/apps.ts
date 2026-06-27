@@ -21,9 +21,41 @@ appsRoute.get("/", async (c) => {
       })
     );
 
-    const apps = entriesWithStats
+    const appNames = entriesWithStats
       .filter(({ isDirectory }) => isDirectory)
       .map(({ name }) => name);
+
+    const apps = await Promise.all(
+      appNames.map(async (name) => {
+        const currentRelease = await getCurrentRelease(name);
+        const ports = await listAllInstances(name);
+        const instanceStates = await Promise.all(
+          ports.map(async (port) => {
+            const state = await getServiceState(`${name}@${port}`);
+            return { port: Number(port), state };
+          })
+        );
+
+        let lastDeployStatus: string | null = null;
+        if (currentRelease) {
+          lastDeployStatus = await fs
+            .readFile(path.join(currentRelease.path, "status"), "utf-8")
+            .then((s) => s.trim())
+            .catch(() => null);
+        }
+
+        const allActive = instanceStates.length > 0 && instanceStates.every((i) => i.state === "active");
+
+        return {
+          name,
+          currentRelease: currentRelease?.id ?? null,
+          lastDeployStatus,
+          instanceStates,
+          instanceCount: instanceStates.length,
+          allActive,
+        };
+      })
+    );
 
     return c.json(apps);
   } catch {

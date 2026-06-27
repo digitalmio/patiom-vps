@@ -1,5 +1,7 @@
+import pc from "picocolors";
 import { consola } from "consola";
 import { createApiClient } from "../core/api";
+import { scopeColor, printTable } from "../core/ui";
 
 export type TokenCreateOptions = {
   name: string;
@@ -7,7 +9,7 @@ export type TokenCreateOptions = {
 };
 
 export const tokenCreateCommand = async (options: TokenCreateOptions) => {
-  const api = await createApiClient();
+  const api = createApiClient();
 
   consola.start(`Creating token "${options.name}" with scope "${options.scope}"...`);
 
@@ -20,7 +22,7 @@ export const tokenCreateCommand = async (options: TokenCreateOptions) => {
     console.log("");
     consola.success("Token created!");
     console.log("");
-    console.log(`  Token: ${result.token}`);
+    console.log(`  ${pc.bold(pc.green(result.token))}`);
     console.log("");
     consola.warn(result.warning);
     console.log("");
@@ -31,7 +33,7 @@ export const tokenCreateCommand = async (options: TokenCreateOptions) => {
 };
 
 export const tokenListCommand = async () => {
-  const api = await createApiClient();
+  const api = createApiClient();
 
   try {
     const tokens = await api<Array<{ id: string; name: string; scope: string; createdAt: string; last8: string }>>("/tokens");
@@ -41,15 +43,14 @@ export const tokenListCommand = async () => {
       return;
     }
 
-    console.log("");
-    console.log("  Tokens:");
-    console.log("");
+    const rows = tokens.map((token) => [
+      token.name,
+      scopeColor(token.scope),
+      new Date(token.createdAt).toLocaleDateString(),
+      pc.dim(`••••${token.last8}`),
+    ]);
 
-    tokens.forEach((token) => {
-      const date = new Date(token.createdAt).toLocaleDateString();
-      console.log(`  ${token.name} | ${token.scope} | ${date} | ••••${token.last8}`);
-    });
-
+    printTable(["Name", "Scope", "Created", "Token"], rows);
     console.log("");
   } catch (error) {
     consola.error(`Failed: ${error instanceof Error ? error.message : error}`);
@@ -58,7 +59,7 @@ export const tokenListCommand = async () => {
 };
 
 export const tokenRevokeCommand = async (id: string) => {
-  const api = await createApiClient();
+  const api = createApiClient();
 
   consola.start(`Revoking token ${id}...`);
 

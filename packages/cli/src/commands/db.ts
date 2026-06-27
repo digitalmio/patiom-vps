@@ -1,20 +1,27 @@
+import pc from "picocolors";
 import { consola } from "consola";
 import { createApiClient } from "../core/api";
 import { getAppName } from "../core/app";
+import { formatBytes, printTable } from "../core/ui";
 
 export const dbListCommand = async () => {
-  const api = await createApiClient();
+  const api = createApiClient();
   const appName = await getAppName();
 
   try {
-    const dbs = await api<string[]>(`/db?appName=${encodeURIComponent(appName)}`);
+    const dbs = await api<Array<{ name: string; sizeBytes: number }>>(`/db?appName=${encodeURIComponent(appName)}`);
     if (dbs.length === 0) {
       consola.info(`No databases found for ${appName}.`);
       return;
     }
 
-    console.log("");
-    dbs.forEach((db) => console.log(`  ${db}`));
+    let rows: string[][];
+    if (typeof dbs[0] === "string") {
+      rows = (dbs as string[]).map((name) => [name, pc.dim("—")]);
+    } else {
+      rows = (dbs as Array<{ name: string; sizeBytes: number }>).map((db) => [db.name, formatBytes(db.sizeBytes)]);
+    }
+    printTable(["Database", "Size"], rows);
     console.log("");
   } catch (error) {
     consola.error(`Failed: ${error instanceof Error ? error.message : error}`);
@@ -23,7 +30,7 @@ export const dbListCommand = async () => {
 };
 
 export const dbAddCommand = async (name: string) => {
-  const api = await createApiClient();
+  const api = createApiClient();
   const appName = await getAppName();
 
   consola.start(`Creating database ${name}...`);
@@ -41,7 +48,7 @@ export const dbAddCommand = async (name: string) => {
 };
 
 export const dbRemoveCommand = async (name: string) => {
-  const api = await createApiClient();
+  const api = createApiClient();
   const appName = await getAppName();
 
   consola.start(`Removing database ${name}...`);
