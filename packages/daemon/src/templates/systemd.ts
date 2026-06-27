@@ -24,6 +24,9 @@ DynamicUser=yes
 ProtectSystem=strict
 ProtectHome=yes
 ReadWritePaths=${PATIOM_ROOT}/apps/%p
+NoNewPrivileges=yes
+PrivateTmp=yes
+RestrictNamespaces=yes
 
 [Install]
 WantedBy=multi-user.target

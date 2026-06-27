@@ -24,7 +24,7 @@ of that RAM is yours.
 
 ### "I could do this with a bash script"
 
-You could — until you need the second deploy. A `rsync && pnpm install && systemctl restart`
+You could — until you need the second deploy. A `rsync && npm install && systemctl restart`
 script works right up until:
 
 - A deploy breaks and you need to **roll back** to the previous release in one command,
@@ -56,6 +56,7 @@ Use them — they're great at what they do. They're a different tool for a diffe
 | Minimum hardware   | A real VPS                         | A $3 VPS or a Raspberry Pi          |
 | Databases          | Databases run in containers       | File-based DB engines (SQLite, Turso, DuckDB) |
 | Persistent storage | Docker volumes (manual config)     | Built-in `storage/` folder, zero config |
+| Isolation          | Docker container isolation         | systemd kernel-level isolation (`DynamicUser=yes`, `ProtectSystem=strict`, `NoNewPrivileges=yes`, and more) |
 | Config             | Web dashboard + compose files      | A `patiom` key in `package.json`    |
 
 If you run 15 services in 6 languages with one-click Postgres, you want Coolify.
@@ -65,10 +66,62 @@ of Docker and build steps, you want Patiom.
 ### What Patiom deliberately doesn't do
 
 - **No Docker.** Your app is a process, not a container. Debug it with the tools you already know.
-- **No server-side builds.** The server only ever runs `pnpm install` and your start script. Build OOMs on small VPSes are not a thing.
+- **No server-side builds.** The server only ever runs `npm install` and your start script. Build OOMs on small VPSes are not a thing.
 - **No database engine.** Patiom creates empty files in `db/` that survive every deploy. Open them with SQLite, Turso, DuckDB, or whatever you want. It's just a file.
 - **No backup system (yet).** Backups (local or S3) are planned for v2. For now, `scp` your `shared/` folder or use whatever backup tool you prefer.
 - **No YAML, no dashboard required.** If it can't be expressed in `package.json`, it doesn't exist.
+
+## Security
+
+### Container-grade isolation without containers
+
+Docker's pitch is isolation — your app gets its own filesystem, its own user, its own network namespace. Systemd provides equivalent isolation at the kernel level, without a container runtime.
+
+Every Patiom app runs under these systemd directives:
+
+| Directive | What it does |
+|-----------|-------------|
+| `DynamicUser=yes` | Each instance runs as an ephemeral, unprivileged system user — fresh random UID on every restart, no home directory, no shell. The user is created at start and destroyed at stop. |
+| `ProtectSystem=strict` | The entire filesystem is mounted read-only for the process. The app cannot write anywhere. |
+| `ProtectHome=yes` | `/home`, `/root`, and `/run/user` are completely inaccessible — not even readable. |
+| `ReadWritePaths=...` | The app's **only** writeable path is its own directory: `/var/lib/patiom/apps/<name>/`. |
+| `NoNewPrivileges=yes` | Blocks privilege escalation via setuid/setgid binaries. If a dependency is compromised, it cannot gain new privileges. |
+| `PrivateTmp=yes` | Isolated `/tmp` per service — no other process on the server can read the app's temp files. |
+| `RestrictNamespaces=yes` | Blocks creating new mount, PID, network, or user namespaces. Prevents container escape-style attacks. |
+
+This is kernel-level isolation — cgroups, mount namespaces, and user namespaces — enforced by systemd. There is no container runtime to exploit, no Docker socket, no daemon running as root that wraps your application.
+
+### App-to-app isolation
+
+Each app gets its own `DynamicUser` — a different random UID. App A:
+
+- Cannot read App B's files (different UID, no shared group, `ProtectHome` prevents reading any user directories)
+- Cannot write to App B's directory (`ReadWritePaths` doesn't include it)
+- Cannot see App B's environment variables (separate `EnvironmentFile`)
+- Cannot interact with App B's processes (isolated namespaces)
+
+The daemon and rpxy run with elevated privileges by design — the daemon manages systemd units, environment files, and deployment directories; rpxy binds to ports 80/443 and manages TLS certificates. Only your application code runs fully sandboxed under the directives listed above.
+
+### Secrets
+
+- `.env` files are stored with `0600` permissions — only root and the app's ephemeral user can read them
+- Secrets are never in the deployment archive
+- Secrets are never in git
+- Injected at runtime via systemd's `EnvironmentFile=` — not passed as command-line arguments, so they never appear in `ps` output
+- Written atomically (temp file + rename) to prevent partial reads during write
+
+### API security
+
+- Daemon API requires a Bearer token on every request
+- Tokens have scopes: `master` (full access, cannot be revoked via API), `rw` (deploy, env, db), `ro` (read-only)
+- Master token can only be revoked by logging into the server — no API endpoint can delete it
+- All API calls are audited with token name, HTTP method, path, and response status
+
+### TLS/HTTPS
+
+- All certificates are issued by Let's Encrypt
+- Auto-renewed by rpxy, no manual certificate management
+- No self-signed certificates in production
 
 ## How it works
 
@@ -122,6 +175,9 @@ That's it. Your app is running behind rpxy with automatic HTTPS, sandboxed under
 patiom login     Link your machine to a Patiom daemon
 patiom init      Bootstrap a project for deployment
 patiom deploy    Build, zip, and upload your application
+patiom status    Show server overview or app details
+patiom restart   Restart a service (app, rpxy, or daemon)
+patiom logs      View and follow runtime logs from journalctl
 patiom db         Manage persistent database files
 patiom env         Manage environment variables (set, delete)
 patiom token       Manage auth tokens (create, list, revoke)
@@ -180,18 +236,18 @@ patiom deploy --dry-run # build + zip locally without uploading
 
 ## On the server
 
-The daemon always uses **pnpm**. It extracts the archive, runs `pnpm install`, then runs whichever script exists (checked in order):
+The daemon extracts the archive, runs `npm ci --omit=dev` (or `npm install --omit=dev` if no lockfile), then runs whichever script exists (checked in order):
 
-1. `pnpm run patiom`
-2. `pnpm run start`
+1. `npm run patiom`
+2. `npm run start`
 
-If your `start` script uses npm or yarn, add a `patiom` script with pnpm equivalents:
+Your lockfile (`package-lock.json`) is bundled in the archive. If your `start` script uses yarn or pnpm locally, add a `patiom` script with an npm equivalent so it runs on the server:
 
 ```json
 {
   "scripts": {
     "start": "yarn run dev",
-    "patiom": "pnpm run dev"
+    "patiom": "node dist/index.js"
   }
 }
 ```
@@ -348,10 +404,11 @@ You'll be prompted for your daemon URL and auth token (or pass them as flags). C
 
 ## Coming in v2
 
+- **Cronjobs** — scheduled tasks defined in `package.json` (`patiom.cron`), run as systemd timer units. No new dependencies.
 - **Database backups** — local snapshots or push to S3-compatible storage. `patiom backup` and `patiom backup --s3`.
 - **Release pruning** — keep last N releases, automatically drop older ones.
 - **`patiom rollback`** — swap to the previous release in one command.
-- **`patiom logs`** — stream app logs from `journalctl` to your terminal.
+- **`patiom metrics`** — view server and per-app CPU/memory usage over time.
 - **`instances: "maxcpu"`** — automatically scale to all available CPU cores.
 - **Staging / preview deploys** — `patiom deploy --staging` deploys without going live (Fly.io style). Promote to live when ready.
 - **Multi-server support** — deploy to different servers from one config. `~/.config/patiom-nodejs/config.json` stores a list of servers, `patiom deploy --server staging` picks the target.
@@ -362,6 +419,11 @@ You'll be prompted for your daemon URL and auth token (or pass them as flags). C
 
 - **`patiom.run` domains** — dedicated subdomains with managed SSL, no shared rate limits. `patiom deploy` automatically provisions `{name}.patiom.run` with valid certificates.
 - **Custom deployment domains** — bring your own domain (e.g. `foo.example.com`), delegate DNS to Patiom nameservers, and get automatic wildcard SSL for all your apps. No manual certificate management.
+
+## Coming in v3+
+
+- **Simple job queue** — a lightweight, SQLite-based queue for background jobs. No Redis, no BullMQ, no external infrastructure. Just a `.db` file in your app's `db/` folder. Workers run in your app process. `patiom queue list`, `patiom queue failed`, `patiom queue retry`. Inspired by BullMQ but designed for Patiom's bare-metal philosophy: one file, zero setup.
+- **`patiom studio`** — a Prisma Studio-style web dashboard (full management: status, logs, metrics, env, tokens, deploy). Served either as a CLI command (`patiom studio` opens a local web server + browser) or on its own domain.
 
 ## Monorepo structure
 
