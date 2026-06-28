@@ -1,6 +1,7 @@
 {
   "name": "@patiom/daemon",
   "version": "0.0.11",
+  "description": "Patiom daemon — bare-metal deployment server agent",
   "type": "module",
   "bin": {
     "patiom-server": "dist/index.js"
