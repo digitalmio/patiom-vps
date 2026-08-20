@@ -1,0 +1,15 @@
+name = "patiom-ingestor"
+main = "src/index.ts"
+compatibility_date = "2026-08-20"
+compatibility_flags = ["nodejs_compat"]
+
+[[queues.producers]]
+  binding = "SCHEMA_QUEUE"
+  queue = "patiom-schema-queue"
+
+[[queues.producers]]
+  binding = "LOGS_QUEUE"
+  queue = "patiom-logs-queue"
+
+# DATABASE_URL should be provided as a secret in production:
+#   wrangler secret put DATABASE_URL

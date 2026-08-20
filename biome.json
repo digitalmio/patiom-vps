@@ -9,11 +9,16 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**/src/**/*",
-			"**/plugins/**/*",
+			"**/apps/*/src/**/*",
+			"**/packages/**/*",
 			"**/.vscode/**/*",
 			"**/index.html",
 			"**/vite.config.js",
-			"!**/src/routeTree.gen.ts"
+			"!**/src/routeTree.gen.ts",
+			"!**/routeTree.gen.ts",
+			"!**/dist/**",
+			"!**/.output/**",
+			"!**/.nitro/**"
 		]
 	},
 	"formatter": {

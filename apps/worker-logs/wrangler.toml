@@ -1,0 +1,18 @@
+name = "patiom-worker-logs"
+main = "src/index.ts"
+compatibility_date = "2026-08-20"
+compatibility_flags = ["nodejs_compat"]
+
+[[queues.consumers]]
+  queue = "patiom-logs-queue"
+  max_batch_size = 10
+  max_retries = 3
+
+# IP -> country lookups use the IPLocate API and are cached in the
+# `ip_geo_cache` DB table for IP_GEO_TTL_DAYS (default 5). The API key is a
+# secret:
+#   wrangler secret put IPLOCATE_KEY
+# vars = { IP_GEO_TTL_DAYS = "5" }
+
+# DATABASE_URL should be provided as a secret in production:
+#   wrangler secret put DATABASE_URL

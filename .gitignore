@@ -5,10 +5,16 @@ dist-ssr
 *.local
 count.txt
 .env
+.devtool
 .nitro
 .tanstack
 .output
 .vinxi
 todos.json
+.wrangler
+.dev.vars
 
-src/workers/maxmind/*.mmdb
+# MaxMind GeoLite2 databases
+**/*.mmdb
+
+*.log

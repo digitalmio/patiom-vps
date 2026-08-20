@@ -1,0 +1,12 @@
+name = "patiom-worker-schema"
+main = "src/index.ts"
+compatibility_date = "2026-08-20"
+compatibility_flags = ["nodejs_compat"]
+
+[[queues.consumers]]
+  queue = "patiom-schema-queue"
+  max_batch_size = 10
+  max_retries = 3
+
+# DATABASE_URL should be provided as a secret in production:
+#   wrangler secret put DATABASE_URL
