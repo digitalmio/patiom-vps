@@ -48,6 +48,7 @@ describe("mercurius plugin", () => {
 		);
 		expect(records[0]?.body.method).toBe("POST");
 		expect(records[0]?.body.ip).toBe("3.4.5.6");
+		expect(records[0]?.body.statusCode).toBe(200);
 
 		patiom.stop();
 		await app.close();

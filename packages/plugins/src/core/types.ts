@@ -18,6 +18,11 @@ export type PatiomPayloadOptions = {
 	hasSetCookie?: boolean;
 	graphqlClientName?: string;
 	graphqlClientVersion?: string;
+	/**
+	 * HTTP status code of the response. Defaults to 200 when not provided
+	 * (execution-layer integrations like envelop have no response available).
+	 */
+	statusCode?: number;
 };
 
 export type PatiomPayload = {
@@ -46,4 +51,9 @@ export type PatiomLoggerOptions = {
 	endpoint?: string;
 	sendVariablesAsHash?: boolean;
 	schemaSyncing?: boolean;
+	/**
+	 * Debounce delay (ms) before the schema sync request is sent. Defaults to a
+	 * random 0-5000ms to avoid thundering herds on server startup.
+	 */
+	schemaSyncDelay?: number;
 };

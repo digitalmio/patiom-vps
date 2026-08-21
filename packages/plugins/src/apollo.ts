@@ -67,6 +67,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 						hasSetCookie: response.http.headers.has("set-cookie"),
 						graphqlClientName,
 						graphqlClientVersion,
+						statusCode: response.http.status ?? 200,
 					});
 				},
 			};

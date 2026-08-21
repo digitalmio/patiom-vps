@@ -28,15 +28,18 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
  */
 export function createPatiomYogaPlugin(options: PatiomLoggerOptions): Plugin {
 	const logger = createPatiomLogger(options);
+	const starts = new WeakMap<Request, number>();
 	const pending = new WeakMap<Request, Pending>();
 
 	return {
 		onSchemaChange({ schema }) {
 			if (schema) logger.sendSchema(schema);
 		},
+		async onRequest({ request }) {
+			starts.set(request, Date.now());
+		},
 		onExecute({ args, executeFn, setExecuteFn }) {
 			const http = getHttpFromContext(args.contextValue);
-			const start = Date.now();
 			const operation = print(args.document);
 
 			setExecuteFn(async (executeArgs) => {
@@ -52,7 +55,7 @@ export function createPatiomYogaPlugin(options: PatiomLoggerOptions): Plugin {
 					!Array.isArray(result)
 				) {
 					pending.set(request, {
-						start,
+						start: starts.get(request) ?? Date.now(),
 						operation,
 						operationName: executeArgs.operationName,
 						variables: executeArgs.variableValues,
@@ -82,6 +85,7 @@ export function createPatiomYogaPlugin(options: PatiomLoggerOptions): Plugin {
 				hasSetCookie: response.headers.has("set-cookie"),
 				graphqlClientName: data.http.graphqlClientName,
 				graphqlClientVersion: data.http.graphqlClientVersion,
+				statusCode: response.status,
 			});
 		},
 	};

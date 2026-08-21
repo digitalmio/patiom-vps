@@ -120,6 +120,10 @@ export function withPatiomLogger<
 				body = undefined;
 			}
 
+			if (body === undefined) {
+				return response;
+			}
+
 			logger.log({
 				headers: request.headers,
 				method: request.method,
@@ -136,6 +140,7 @@ export function withPatiomLogger<
 					request.headers.get("x-graphql-client-name") ?? undefined,
 				graphqlClientVersion:
 					request.headers.get("x-graphql-client-version") ?? undefined,
+				statusCode: response.status,
 			});
 		}
 

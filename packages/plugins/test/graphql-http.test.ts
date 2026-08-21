@@ -56,5 +56,37 @@ describe("graphql-http plugin (handler wrapper)", () => {
 		expect(records[0]?.body.operation).toBe("{ hello }");
 		expect(records[0]?.body.method).toBe("POST");
 		expect(records[0]?.body.ip).toBe("2.3.4.5");
+		expect(records[0]?.body.statusCode).toBe(200);
+	});
+
+	it("logs a GET request with query parameters", async () => {
+		const records: Posted[] = [];
+		const handler = withPatiomLogger(
+			createHandler({ schema }),
+			baseOptions(records),
+		);
+
+		const res = await handler(
+			new Request("http://localhost/graphql?query=%7B%20hello%20%7D", {
+				method: "GET",
+			}),
+		);
+
+		expect(await res.json()).toEqual({ data: { hello: "world" } });
+
+		expect(records).toHaveLength(1);
+		expect(records[0]?.body.operation).toBe("{ hello }");
+		expect(records[0]?.body.method).toBe("GET");
+	});
+
+	it("skips logging when the response body is not JSON", async () => {
+		const records: Posted[] = [];
+		const stub = (_req: Request) => new Response("not json", { status: 400 });
+		const handler = withPatiomLogger(stub, baseOptions(records));
+
+		const res = await handler(post("http://localhost/graphql", "{ hello }"));
+
+		expect(res.status).toBe(400);
+		expect(records).toHaveLength(0);
 	});
 });

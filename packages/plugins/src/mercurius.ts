@@ -162,6 +162,7 @@ export function createPatiomMercuriusPlugin(
 							headers.get("x-graphql-client-name") ?? undefined,
 						graphqlClientVersion:
 							headers.get("x-graphql-client-version") ?? undefined,
+						statusCode: stored.reply.statusCode,
 					});
 				},
 			);

@@ -33,6 +33,7 @@ describe("graphql-yoga plugin", () => {
 		expect(records[0]?.body.method).toBe("POST");
 		expect(records[0]?.body.ip).toBe("9.9.9.9");
 		expect(records[0]?.body.variables).toBeUndefined();
+		expect(records[0]?.body.statusCode).toBe(200);
 	});
 
 	it("logs errors from a failing operation", async () => {

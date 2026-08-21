@@ -1,11 +1,6 @@
-import {
-	type GraphQLError,
-	type GraphQLSchema,
-	introspectionFromSchema,
-} from "graphql";
+import { type GraphQLSchema, introspectionFromSchema } from "graphql";
 import { extractPatiomPayload } from "./payload";
 import type {
-	Headers,
 	PatiomLoggerOptions,
 	PatiomPayload,
 	PatiomPayloadOptions,
@@ -63,10 +58,11 @@ function createSchemaSyncer(options: {
 	token: string;
 	endpoint: string;
 	shouldSyncSchema: boolean;
+	schemaSyncDelay: number;
 }) {
 	let stopped = false;
 	let timeout: ReturnType<typeof setTimeout> | null = null;
-	const { fetch, token, endpoint, shouldSyncSchema } = options;
+	const { fetch, token, endpoint, shouldSyncSchema, schemaSyncDelay } = options;
 
 	const sendSchema = (schema: GraphQLSchema): void => {
 		if (!shouldSyncSchema) return;
@@ -94,7 +90,7 @@ function createSchemaSyncer(options: {
 			} catch (_error) {
 				// Silently fail - schema sync shouldn't break the application
 			}
-		}, Math.random() * 5000);
+		}, schemaSyncDelay);
 	};
 
 	const stop = (): void => {
@@ -120,6 +116,7 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 		token: options.token,
 		endpoint,
 		shouldSyncSchema,
+		schemaSyncDelay: options.schemaSyncDelay ?? Math.random() * 5000,
 	});
 
 	return {
@@ -139,6 +136,3 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 		},
 	};
 }
-
-export type { Headers };
-export type { GraphQLError };

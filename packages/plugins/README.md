@@ -105,6 +105,7 @@ All plugins accept the same options object:
 | `fetch`              | `fn`     | `globalThis.fetch`         | Fetch implementation used for ingest requests          |
 | `sendVariablesAsHash`| `boolean`| `true`                     | Send a hash of variables instead of raw values         |
 | `schemaSyncing`      | `boolean`| `true`                     | Send the GraphQL schema to Patiom                      |
+| `schemaSyncDelay`    | `number` | random 0-5000ms            | Debounce delay (ms) before the schema sync request     |
 
 The ingest endpoint is resolved as: `endpoint` option → `PATIOM_ENDPOINT` env
 var (a full URL) → `https://ingest.patiom.dev`.
@@ -124,3 +125,13 @@ usePatiomLogger({
 ## License
 
 Apache-2.0
+
+## Publishing
+
+```bash
+pnpm --filter @patiom/client publish
+```
+
+Runs typecheck, tests and the build via `prepublishOnly` before packing. No
+`repository` field is published - this package is distributed from a private
+monorepo.

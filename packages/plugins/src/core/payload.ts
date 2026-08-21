@@ -15,6 +15,7 @@ function extractPatiomPayload({
 	hasSetCookie,
 	graphqlClientName,
 	graphqlClientVersion,
+	statusCode,
 }: PatiomPayloadOptions & { sendVariablesAsHash: boolean }): PatiomPayload {
 	const forwardedFor = headers.get("x-forwarded-for");
 	const ips = forwardedFor
@@ -66,7 +67,7 @@ function extractPatiomPayload({
 		hasSetCookie: hasSetCookie ?? false,
 		referer: headers.get("referer") ?? undefined,
 		userAgent: headers.get("user-agent") ?? undefined,
-		statusCode: 200,
+		statusCode: statusCode ?? 200,
 		errors,
 		responseSize: JSON.stringify(response).length,
 		responseHash: createDjb2Hash(JSON.stringify(response)),
