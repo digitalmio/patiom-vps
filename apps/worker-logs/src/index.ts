@@ -73,7 +73,6 @@ export default {
 
 				// Step 6: Insert log record
 				const timestamp = new Date(data.timestamp);
-				const datePartition = timestamp.toISOString().split("T")[0]; // Extract date only (YYYY-MM-DD)
 
 				await database.insert(schema.requestLogs).values({
 					timestamp,
@@ -123,9 +122,6 @@ export default {
 					// Resolved field IDs (references to schema_fields table)
 					requestedFieldIds:
 						requestedFieldIds.length > 0 ? requestedFieldIds : null,
-
-					// Date partition for TimescaleDB (date only, no time)
-					datePartition,
 				});
 			} catch (error) {
 				// Log and drop (matches previous BullMQ behavior of permanent failure

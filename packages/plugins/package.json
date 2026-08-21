@@ -1,22 +1,29 @@
 {
 	"name": "@patiom/client",
 	"version": "1.0.0",
-	"description": "",
+	"description": "Patiom logging plugins for popular GraphQL servers.",
+	"license": "Apache-2.0",
+	"packageManager": "pnpm@10.17.1",
 	"module": "dist/index.mjs",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"scripts": {
 		"build": "tsdown",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"typecheck": "tsc --noEmit"
 	},
 	"peerDependencies": {
 		"graphql": "^15.0.0 || ^16.0.0"
-	},
-	"devDependencies": {
-		"@types/node": "^22.18.10",
-		"graphql": "^16.11.0",
-		"tsdown": "^0.15.9",
-		"typescript": "^5.9.3"
 	},
 	"exports": {
 		".": {
@@ -28,15 +35,68 @@
 			"types": "./dist/apollo.d.ts",
 			"import": "./dist/apollo.mjs",
 			"require": "./dist/apollo.js"
+		},
+		"./graphql-yoga": {
+			"types": "./dist/graphql-yoga.d.ts",
+			"import": "./dist/graphql-yoga.mjs",
+			"require": "./dist/graphql-yoga.js"
+		},
+		"./envelop": {
+			"types": "./dist/envelop.d.ts",
+			"import": "./dist/envelop.mjs",
+			"require": "./dist/envelop.js"
+		},
+		"./mercurius": {
+			"types": "./dist/mercurius.d.ts",
+			"import": "./dist/mercurius.mjs",
+			"require": "./dist/mercurius.js"
+		},
+		"./graphql-http": {
+			"types": "./dist/graphql-http.d.ts",
+			"import": "./dist/graphql-http.mjs",
+			"require": "./dist/graphql-http.js"
+		}
+	},
+	"typesVersions": {
+		"*": {
+			"apollo-server": [
+				"dist/apollo.d.ts"
+			],
+			"graphql-yoga": [
+				"dist/graphql-yoga.d.ts"
+			],
+			"envelop": [
+				"dist/envelop.d.ts"
+			],
+			"mercurius": [
+				"dist/mercurius.d.ts"
+			],
+			"graphql-http": [
+				"dist/graphql-http.d.ts"
+			]
 		}
 	},
 	"keywords": [
 		"patiom",
 		"apollo",
 		"graphql",
-		"plugin"
+		"plugin",
+		"graphql-yoga",
+		"envelop",
+		"mercurius"
 	],
 	"author": "Digital MIO Ltd",
-	"license": "ISC",
-	"packageManager": "pnpm@10.17.1"
+	"devDependencies": {
+		"@apollo/server": "^5.5.1",
+		"@envelop/core": "^5.6.0",
+		"@types/node": "^22.18.10",
+		"fastify": "^5.12.1",
+		"graphql": "^16.11.0",
+		"graphql-http": "^1.23.0",
+		"graphql-yoga": "^5.22.0",
+		"mercurius": "^16.10.0",
+		"tsdown": "^0.15.9",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.4"
+	}
 }

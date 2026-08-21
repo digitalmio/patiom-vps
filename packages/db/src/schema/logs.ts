@@ -1,26 +1,26 @@
 // GraphQL Analytics Logs Schema
-// Note: These tables will be converted to TimescaleDB hyper-tables via migrations
-// See sql/timescale-init.sql for TimescaleDB-specific features
 //
-// Architecture:
-// 1. Raw logs stored in `request_logs` (TimescaleDB hyper-table)
-// 2. Aggregations handled by TimescaleDB Continuous Aggregates (auto-updating materialized views)
-// 3. No manual cron jobs needed - TimescaleDB refreshes views automatically
+// Plain Postgres (no TimescaleDB). Aggregations are defined as regular views
+// that are recomputed on query — fine for the starter, and replace the old
+// TimescaleDB Continuous Aggregates:
 //
 // Available views (query like tables):
 // - operation_stats_hourly: Hourly operation metrics
 // - operation_stats_daily: Daily operation metrics
 // - field_usage_stats_daily: Daily field usage across all operations
+// - recent_operations: Operation metrics for the last 24 hours
+// - error_logs: Rows that reported at least one GraphQL error
 
+import { sql } from "drizzle-orm";
 import {
 	bigint,
 	boolean,
-	date,
+	doublePrecision,
 	index,
 	integer,
 	jsonb,
 	pgTable,
-	primaryKey,
+	pgView,
 	text,
 	timestamp,
 	varchar,
@@ -29,13 +29,12 @@ import { nanoid } from "nanoid";
 import { projects } from "./app";
 
 // Raw request logs (detailed per-request data)
-// Will be converted to TimescaleDB hypertable for time-series optimization
 export const requestLogs = pgTable(
 	"request_logs",
 	{
 		id: text("id")
 			.$defaultFn(() => nanoid())
-			.notNull(),
+			.primaryKey(),
 		timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 		projectId: text("project_id")
 			.notNull()
@@ -74,7 +73,7 @@ export const requestLogs = pgTable(
 		osVersion: varchar("os_version", { length: 20 }),
 		platformType: varchar("platform_type", { length: 20 }), // desktop, mobile, tablet, tv
 
-		// Parsed Geolocation (from MaxMind)
+		// Parsed Geolocation (from IPLocate)
 		countryCode: varchar("country_code", { length: 2 }), // ISO 3166-1 alpha-2
 		countryName: varchar("country_name", { length: 100 }),
 		city: varchar("city", { length: 100 }),
@@ -97,16 +96,8 @@ export const requestLogs = pgTable(
 		// Array of schema_fields.id references for fields used in this request
 		// Allows direct joins to schema_fields for analytics
 		requestedFieldIds: jsonb("requested_field_ids").$type<string[]>(),
-
-		// Partitioning hint (generated column in Postgres)
-		// Note: Generated columns are created via SQL, not through Drizzle directly
-		// See migration file or timescale-init.sql for implementation
-		datePartition: date("date_partition").notNull(),
 	},
 	(table) => [
-		// Composite primary key required for TimescaleDB hypertable
-		primaryKey({ columns: [table.id, table.timestamp] }),
-		// Indexes
 		index("idx_request_logs_project_timestamp").on(
 			table.projectId,
 			table.timestamp,
@@ -126,10 +117,6 @@ export const requestLogs = pgTable(
 			table.statusCode,
 			table.timestamp,
 		),
-		index("idx_request_logs_date_partition").on(
-			table.datePartition,
-			table.projectId,
-		),
 		index("idx_request_logs_operation_hash").on(
 			table.projectId,
 			table.responseHash,
@@ -145,18 +132,140 @@ export const requestLogs = pgTable(
 			table.browserName,
 			table.timestamp,
 		),
-		// Note: GIN index for requested_field_ids array needs to be created via SQL
-		// CREATE INDEX idx_request_logs_requested_field_ids ON request_logs USING GIN (requested_field_ids);
+		// GIN index for JSONB array field queries (e.g., find all requests using a specific field ID)
+		index("idx_request_logs_requested_field_ids").using(
+			"gin",
+			table.requestedFieldIds,
+		),
 	],
 );
 
-// TimescaleDB Continuous Aggregates (Materialized Views)
-// These views are created via SQL in sql/timescale-init.sql
-// They are NOT managed by Drizzle to avoid conflicts during migrations
-//
-// Available continuous aggregates:
-// - operation_stats_hourly: Hourly operation metrics (auto-refreshes every hour)
-// - operation_stats_daily: Daily operation metrics (auto-refreshes daily)
-// - field_usage_stats_daily: Daily field usage across operations (auto-refreshes daily)
-//
-// Query them directly using sql`` or by defining types in your query layer
+// Aggregation views (recomputed on each query — no background jobs needed)
+
+export const operationStatsHourly = pgView("operation_stats_hourly", {
+	bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+	projectId: text("project_id").notNull(),
+	operationName: varchar("operation_name", { length: 255 }),
+	totalRequests: bigint("total_requests", { mode: "number" }).notNull(),
+	avgLatencyMs: doublePrecision("avg_latency_ms"),
+	minLatencyMs: integer("min_latency_ms"),
+	maxLatencyMs: integer("max_latency_ms"),
+	p50LatencyMs: doublePrecision("p50_latency_ms"),
+	p95LatencyMs: doublePrecision("p95_latency_ms"),
+	p99LatencyMs: doublePrecision("p99_latency_ms"),
+	totalResponseSizeBytes: bigint("total_response_size_bytes", {
+		mode: "number",
+	}),
+	errorCount: bigint("error_count", { mode: "number" }),
+}).as(sql`
+	SELECT
+		date_trunc('hour', timestamp) AS bucket,
+		project_id,
+		operation_name,
+		COUNT(*) AS total_requests,
+		AVG(elapsed_ms) AS avg_latency_ms,
+		MIN(elapsed_ms) AS min_latency_ms,
+		MAX(elapsed_ms) AS max_latency_ms,
+		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY elapsed_ms) AS p50_latency_ms,
+		PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY elapsed_ms) AS p95_latency_ms,
+		PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY elapsed_ms) AS p99_latency_ms,
+		SUM(response_size_bytes) AS total_response_size_bytes,
+		SUM(error_count) AS error_count
+	FROM request_logs
+	GROUP BY bucket, project_id, operation_name
+`);
+
+export const operationStatsDaily = pgView("operation_stats_daily", {
+	bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+	projectId: text("project_id").notNull(),
+	operationName: varchar("operation_name", { length: 255 }),
+	totalRequests: bigint("total_requests", { mode: "number" }).notNull(),
+	avgLatencyMs: doublePrecision("avg_latency_ms"),
+	minLatencyMs: integer("min_latency_ms"),
+	maxLatencyMs: integer("max_latency_ms"),
+	p50LatencyMs: doublePrecision("p50_latency_ms"),
+	p95LatencyMs: doublePrecision("p95_latency_ms"),
+	p99LatencyMs: doublePrecision("p99_latency_ms"),
+	totalResponseSizeBytes: bigint("total_response_size_bytes", {
+		mode: "number",
+	}),
+	errorCount: bigint("error_count", { mode: "number" }),
+}).as(sql`
+	SELECT
+		date_trunc('day', timestamp) AS bucket,
+		project_id,
+		operation_name,
+		COUNT(*) AS total_requests,
+		AVG(elapsed_ms) AS avg_latency_ms,
+		MIN(elapsed_ms) AS min_latency_ms,
+		MAX(elapsed_ms) AS max_latency_ms,
+		PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY elapsed_ms) AS p50_latency_ms,
+		PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY elapsed_ms) AS p95_latency_ms,
+		PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY elapsed_ms) AS p99_latency_ms,
+		SUM(response_size_bytes) AS total_response_size_bytes,
+		SUM(error_count) AS error_count
+	FROM request_logs
+	GROUP BY bucket, project_id, operation_name
+`);
+
+export const fieldUsageStatsDaily = pgView("field_usage_stats_daily", {
+	bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+	projectId: text("project_id").notNull(),
+	fieldId: text("field_id").notNull(),
+	usageCount: bigint("usage_count", { mode: "number" }).notNull(),
+}).as(sql`
+	SELECT
+		date_trunc('day', timestamp) AS bucket,
+		project_id,
+		field_id,
+		COUNT(*) AS usage_count
+	FROM request_logs, jsonb_array_elements_text(requested_field_ids) AS field_id
+	GROUP BY bucket, project_id, field_id
+`);
+
+export const recentOperations = pgView("recent_operations", {
+	projectId: text("project_id").notNull(),
+	operationName: varchar("operation_name", { length: 255 }),
+	totalRequests: bigint("total_requests", { mode: "number" }).notNull(),
+	avgLatencyMs: doublePrecision("avg_latency_ms"),
+	p95LatencyMs: doublePrecision("p95_latency_ms"),
+	errorRatePct: doublePrecision("error_rate_pct"),
+}).as(sql`
+	SELECT
+		project_id,
+		operation_name,
+		COUNT(*) AS total_requests,
+		AVG(elapsed_ms) AS avg_latency_ms,
+		PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY elapsed_ms) AS p95_latency_ms,
+		(SUM(CASE WHEN error_count > 0 THEN 1 ELSE 0 END)::FLOAT / COUNT(*) * 100) AS error_rate_pct
+	FROM request_logs
+	WHERE timestamp >= NOW() - INTERVAL '24 hours'
+	GROUP BY project_id, operation_name
+	ORDER BY total_requests DESC
+`);
+
+export const errorLogs = pgView("error_logs", {
+	id: text("id").notNull(),
+	timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+	projectId: text("project_id").notNull(),
+	operationName: varchar("operation_name", { length: 255 }),
+	elapsedMs: integer("elapsed_ms"),
+	statusCode: integer("status_code"),
+	errors: jsonb("errors"),
+	ip: varchar("ip", { length: 45 }),
+	userAgent: text("user_agent"),
+}).as(sql`
+	SELECT
+		id,
+		timestamp,
+		project_id,
+		operation_name,
+		elapsed_ms,
+		status_code,
+		errors,
+		ip,
+		user_agent
+	FROM request_logs
+	WHERE error_count > 0
+	ORDER BY timestamp DESC
+`);
