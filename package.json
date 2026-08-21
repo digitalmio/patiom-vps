@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@10.17.1",
   "scripts": {
-    "dev": "concurrently -n web,ingestor,worker-schema,worker-logs -c blue,green,yellow,magenta \"pnpm --filter @patiom/web dev\" \"pnpm --filter @patiom/ingestor dev\" \"pnpm --filter @patiom/worker-schema dev\" \"pnpm --filter @patiom/worker-logs dev\"",
+    "dev": "concurrently -n web,ingestor,worker-schema,worker-logs,demo -c blue,green,yellow,magenta,cyan \"pnpm --filter @patiom/web dev\" \"pnpm --filter @patiom/ingestor dev\" \"pnpm --filter @patiom/worker-schema dev\" \"pnpm --filter @patiom/worker-logs dev\" \"pnpm --filter @patiom/demo dev\"",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",

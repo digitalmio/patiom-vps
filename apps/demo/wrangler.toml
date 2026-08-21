@@ -1,0 +1,11 @@
+name = "patiom-sw-demo"
+main = "src/index.ts"
+compatibility_date = "2026-08-20"
+compatibility_flags = ["nodejs_compat"]
+
+# PATIOM_TOKEN is the Patiom project API token (secret):
+#   wrangler secret put PATIOM_TOKEN
+#
+# PATIOM_ENDPOINT defaults to https://ingest.patiom.dev when unset.
+# Local dev overrides it via .dev.vars.
+# vars = { PATIOM_ENDPOINT = "https://ingest.patiom.dev" }
