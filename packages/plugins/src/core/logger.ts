@@ -1,18 +1,14 @@
 import { type GraphQLSchema, introspectionFromSchema } from "graphql";
 import { extractPatiomPayload } from "./payload";
-import type {
-	PatiomLoggerOptions,
-	PatiomPayload,
-	PatiomPayloadOptions,
-} from "./types";
+import type { PatiomLoggerOptions, PatiomPayloadOptions } from "./types";
 
 export type Logger = {
 	fetch: typeof fetch;
 	token: string;
 	endpoint: string;
-	sendSchema(schema: GraphQLSchema): void;
+	sendSchema(schema: GraphQLSchema): Promise<void>;
 	stop(): void;
-	log(options: PatiomPayloadOptions): void;
+	log(options: PatiomPayloadOptions): Promise<void>;
 };
 
 /**
@@ -37,20 +33,74 @@ function warnFetch(fetchFn: unknown): void {
 	}
 }
 
-async function sendLog(options: {
+type AttemptResult = "success" | "retryable" | "fatal";
+
+/**
+ * Send a single ingest POST. Returns whether the outcome is retryable.
+ * Never rejects — failures are surfaced via `console.warn` by the caller.
+ */
+async function attemptOnce(options: {
 	fetch: typeof fetch;
-	payload: PatiomPayload;
+	url: string;
+	body: string;
 	token: string;
-	endpoint: string;
-}): Promise<Response> {
-	return options.fetch(`${options.endpoint}/api/ingest/log`, {
-		method: "POST",
-		body: JSON.stringify(options.payload),
-		headers: {
-			"Content-Type": "application/json",
-			"Patiom-Token": options.token,
-		},
-	});
+	timeoutMs?: number;
+}): Promise<AttemptResult> {
+	const { fetch, url, body, token, timeoutMs } = options;
+	const signal = timeoutMs != null ? AbortSignal.timeout(timeoutMs) : undefined;
+	try {
+		const res = await fetch(url, {
+			method: "POST",
+			body,
+			headers: {
+				"Content-Type": "application/json",
+				"Patiom-Token": token,
+			},
+			signal,
+		});
+		if (res.ok) return "success";
+		if (res.status >= 500) return "retryable";
+		return "fatal";
+	} catch (_error) {
+		return "retryable";
+	}
+}
+
+/**
+ * Send an ingest POST with optional one-shot retry.
+ * - `retry: true`  → on network error / 5xx, try once more, then warn.
+ * - `retry: false` → fail fast (blocking mode), warn immediately.
+ * - 4xx is never retried (a bad token won't heal).
+ * Never rejects; resolves once the final outcome is reached.
+ */
+async function sendWithRetry(options: {
+	fetch: typeof fetch;
+	url: string;
+	body: string;
+	token: string;
+	retry: boolean;
+	timeoutMs?: number;
+	label: string;
+}): Promise<void> {
+	const { retry, label } = options;
+	const warn = (detail: string) =>
+		console.warn(`Patiom: failed to send ${label}`, detail);
+
+	const first = await attemptOnce(options);
+	if (first === "success") return;
+	if (first === "fatal") {
+		warn("non-retryable error");
+		return;
+	}
+	if (!retry) {
+		warn("network or server error");
+		return;
+	}
+	const second = await attemptOnce(options);
+	if (second === "success") return;
+	warn(
+		second === "fatal" ? "non-retryable error on retry" : "failed after retry",
+	);
 }
 
 function createSchemaSyncer(options: {
@@ -59,37 +109,68 @@ function createSchemaSyncer(options: {
 	endpoint: string;
 	shouldSyncSchema: boolean;
 	schemaSyncDelay: number;
+	flush: "background" | "blocking";
+	waitUntil?: (promise: Promise<unknown>) => void;
+	sendTimeoutMs?: number;
 }) {
 	let stopped = false;
 	let timeout: ReturnType<typeof setTimeout> | null = null;
-	const { fetch, token, endpoint, shouldSyncSchema, schemaSyncDelay } = options;
+	const {
+		fetch,
+		token,
+		endpoint,
+		shouldSyncSchema,
+		schemaSyncDelay,
+		flush,
+		waitUntil,
+		sendTimeoutMs,
+	} = options;
 
-	const sendSchema = (schema: GraphQLSchema): void => {
+	const sendImmediately = (introspection: unknown): Promise<void> => {
+		const retry = flush !== "blocking";
+		const timeoutMs = flush === "blocking" ? sendTimeoutMs : undefined;
+		const promise = sendWithRetry({
+			fetch,
+			url: `${endpoint}/api/ingest/schema`,
+			body: JSON.stringify({ schema: introspection }),
+			token,
+			retry,
+			timeoutMs,
+			label: "schema sync",
+		});
+		if (waitUntil) {
+			waitUntil(promise.catch(() => {}));
+			return Promise.resolve();
+		}
+		return promise;
+	};
+
+	const sendSchema = async (schema: GraphQLSchema): Promise<void> => {
 		if (!shouldSyncSchema) return;
 
 		const introspection = introspectionFromSchema(schema);
 
 		if (timeout) {
 			clearTimeout(timeout);
+			timeout = null;
 		}
 
-		timeout = setTimeout(async () => {
+		if (waitUntil || flush === "blocking") {
+			await sendImmediately(introspection);
+			return;
+		}
+
+		timeout = setTimeout(() => {
 			timeout = null;
-
 			if (stopped) return;
-
-			try {
-				await fetch(`${endpoint}/api/ingest/schema`, {
-					method: "POST",
-					body: JSON.stringify({ schema: introspection }),
-					headers: {
-						"Content-Type": "application/json",
-						"Patiom-Token": token,
-					},
-				});
-			} catch (_error) {
-				// Silently fail - schema sync shouldn't break the application
-			}
+			void sendWithRetry({
+				fetch,
+				url: `${endpoint}/api/ingest/schema`,
+				body: JSON.stringify({ schema: introspection }),
+				token,
+				retry: true,
+				label: "schema sync",
+			});
 		}, schemaSyncDelay);
 	};
 
@@ -108,6 +189,9 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 	const endpoint = resolveEndpoint(options);
 	const sendVariablesAsHash = options.sendVariablesAsHash ?? true;
 	const shouldSyncSchema = options.schemaSyncing ?? true;
+	const flush = options.flush ?? "background";
+	const waitUntil = options.waitUntil;
+	const sendTimeoutMs = options.sendTimeoutMs ?? 2000;
 
 	warnFetch(fetch);
 
@@ -117,6 +201,9 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 		endpoint,
 		shouldSyncSchema,
 		schemaSyncDelay: options.schemaSyncDelay ?? Math.random() * 5000,
+		flush,
+		waitUntil,
+		sendTimeoutMs,
 	});
 
 	return {
@@ -125,14 +212,31 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 		endpoint,
 		sendSchema,
 		stop,
-		log(payloadOptions) {
+		async log(payloadOptions) {
 			const payload = extractPatiomPayload({
 				...payloadOptions,
 				sendVariablesAsHash,
 			});
-			sendLog({ fetch, payload, token: options.token, endpoint }).catch(
-				() => {},
-			);
+			const retry = flush !== "blocking";
+			const timeoutMs = flush === "blocking" ? sendTimeoutMs : undefined;
+			const promise = sendWithRetry({
+				fetch,
+				url: `${endpoint}/api/ingest/log`,
+				body: JSON.stringify(payload),
+				token: options.token,
+				retry,
+				timeoutMs,
+				label: "log",
+			});
+			if (waitUntil) {
+				waitUntil(promise.catch(() => {}));
+				return;
+			}
+			if (flush === "blocking") {
+				await promise;
+				return;
+			}
+			promise.catch(() => {});
 		},
 	};
 }

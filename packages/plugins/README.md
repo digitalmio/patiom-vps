@@ -105,10 +105,64 @@ All plugins accept the same options object:
 | `fetch`              | `fn`     | `globalThis.fetch`         | Fetch implementation used for ingest requests          |
 | `sendVariablesAsHash`| `boolean`| `true`                     | Send a hash of variables instead of raw values         |
 | `schemaSyncing`      | `boolean`| `true`                     | Send the GraphQL schema to Patiom                      |
-| `schemaSyncDelay`    | `number` | random 0-5000ms            | Debounce delay (ms) before the schema sync request     |
+| `schemaSyncDelay`    | `number` | random 0-5000ms            | Debounce delay (ms) before the schema sync (background mode only) |
+| `flush`              | `"background" \| "blocking"` | `"background"` | Delivery mode — see [Serverless & delivery](#serverless--delivery) |
+| `waitUntil`          | `fn`     | _none_                     | Cloudflare Workers `ctx.waitUntil` — lossless, zero-latency |
+| `sendTimeoutMs`      | `number` | `2000`                     | Per-attempt timeout (ms) in `blocking` mode            |
 
 The ingest endpoint is resolved as: `endpoint` option → `PATIOM_ENDPOINT` env
 var (a full URL) → `https://ingest.patiom.dev`.
+
+## Serverless & delivery
+
+Patiom ships three delivery modes so you can match your runtime's lifecycle.
+**Precedence:** `waitUntil` (if provided) > `flush: "blocking"` > `background`.
+
+| Mode | Schema sync | Log send | Retry | Best for |
+| --- | --- | --- | --- | --- |
+| `background` (default) | debounced timer | fire-and-forget | 1 retry on network/5xx + `console.warn` | Long-lived servers (Node, containers) |
+| `waitUntil` (Workers) | immediate, via `waitUntil` | via `waitUntil` | 1 retry + `console.warn` | **Cloudflare Workers** — lossless, zero added latency |
+| `flush: "blocking"` | immediate, awaited | awaited before response | no retry (fail fast) + `console.warn` | Lambda / containers that freeze after the handler returns |
+
+**Cloudflare Workers** — pass `ctx.waitUntil`. The ingest POSTs are routed
+through it, keeping the event alive to completion with **no added response
+latency**:
+
+```ts
+export default {
+  fetch(request, env, ctx) {
+    return yoga.fetch(request, env, ctx);
+  },
+};
+
+createPatiomYogaPlugin({
+  token: env.PATIOM_TOKEN,
+  waitUntil: (promise) => ctx.waitUntil(promise),
+});
+```
+
+**AWS Lambda / containers without `waitUntil`** — use `flush: "blocking"`. The
+plugin awaits the ingest POST before the GraphQL response is finalized, so logs
+survive runtime freeze. `sendTimeoutMs` (default 2000) bounds the worst-case
+added latency if ingest is slow or unreachable. Blocking mode does **not** retry
+— it fails fast to protect your API's latency:
+
+```ts
+createPatiomYogaPlugin({
+  token: process.env.PATIOM_TOKEN,
+  flush: "blocking",
+  sendTimeoutMs: 2000,
+});
+```
+
+> **Warning:** in `blocking` mode your response latency depends on ingest
+> availability. Prefer `waitUntil` on Cloudflare Workers.
+
+Schema sync is unconditional in `waitUntil`/`blocking` modes (sent on first
+request, no debounce timer) — repeated cold starts re-send the schema, but the
+ingest side hash-deduplicates it. The random `schemaSyncDelay` debounce only
+applies to `background` mode, where it prevents thundering herds across many
+server instances restarting together.
 
 ## Envelop-specific options
 

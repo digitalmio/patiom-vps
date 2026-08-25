@@ -13,6 +13,8 @@ const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 let yoga: ReturnType<typeof createYoga> | null = null;
 
+let currentCtx: ExecutionContext | null = null;
+
 function getYoga(env: Env) {
 	yoga ??= createYoga({
 		schema,
@@ -21,6 +23,7 @@ function getYoga(env: Env) {
 				token: env.PATIOM_TOKEN ?? "",
 				endpoint: env.PATIOM_ENDPOINT,
 				fetch: globalThis.fetch,
+				waitUntil: (promise) => currentCtx?.waitUntil(promise),
 			}),
 		],
 	});
@@ -29,6 +32,7 @@ function getYoga(env: Env) {
 
 export default {
 	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		currentCtx = ctx;
 		return getYoga(env).fetch(request, env, ctx);
 	},
 };

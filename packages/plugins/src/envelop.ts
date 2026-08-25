@@ -42,7 +42,7 @@ export function usePatiomLogger(options: EnvelopLoggerOptions): Plugin {
 				const result = await executeFn(executeArgs);
 
 				if (http && !isAsyncIterable(result) && !Array.isArray(result)) {
-					logger.log({
+					await logger.log({
 						headers: http.headers,
 						method: http.method,
 						start,

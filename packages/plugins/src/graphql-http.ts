@@ -46,7 +46,7 @@ export function usePatiomGraphqlHttp(options: GraphqlHttpOptions): {
 			const result = await graphqlExecute(args);
 
 			if (http && !isAsyncIterable(result)) {
-				logger.log({
+				await logger.log({
 					headers: http.headers,
 					method: http.method,
 					start,
@@ -124,7 +124,7 @@ export function withPatiomLogger<
 				return response;
 			}
 
-			logger.log({
+			await logger.log({
 				headers: request.headers,
 				method: request.method,
 				start,

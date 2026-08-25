@@ -52,8 +52,34 @@ export type PatiomLoggerOptions = {
 	sendVariablesAsHash?: boolean;
 	schemaSyncing?: boolean;
 	/**
-	 * Debounce delay (ms) before the schema sync request is sent. Defaults to a
-	 * random 0-5000ms to avoid thundering herds on server startup.
+	 * Debounce delay (ms) before the schema sync request is sent. Only used in
+	 * the default `background` flush mode. Defaults to a random 0-5000ms to
+	 * avoid thundering herds on server startup. Ignored when `waitUntil` is
+	 * provided or `flush` is `"blocking"` (schema is sent immediately).
 	 */
 	schemaSyncDelay?: number;
+	/**
+	 * Delivery mode for log and schema payloads.
+	 *
+	 * - `"background"` (default): fire-and-forget with one retry on network
+	 *   error / 5xx and a `console.warn` on final failure. Adds no latency to
+	 *   GraphQL responses. Use this on long-lived servers.
+	 * - `"blocking"`: await the ingest POST before the GraphQL response is
+	 *   finalized. Reliable on runtimes that freeze after the handler returns
+	 *   (Lambda, containers) but couples response latency to ingest
+	 *   availability. Prefer `waitUntil` on Cloudflare Workers.
+	 */
+	flush?: "background" | "blocking";
+	/**
+	 * Cloudflare Workers `ctx.waitUntil` (or compatible). When provided, all
+	 * ingest promises are routed through it — lossless at zero added latency.
+	 * Takes precedence over `flush`.
+	 */
+	waitUntil?: (promise: Promise<unknown>) => void;
+	/**
+	 * Timeout (ms) for each ingest fetch attempt in `blocking` mode. Bounds
+	 * worst-case added response latency when ingest is slow or unreachable.
+	 * Defaults to 2000. Not applied in `background` or `waitUntil` modes.
+	 */
+	sendTimeoutMs?: number;
 };

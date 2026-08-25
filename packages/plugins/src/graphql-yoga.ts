@@ -72,7 +72,7 @@ export function createPatiomYogaPlugin(options: PatiomLoggerOptions): Plugin {
 			if (!data) return;
 			pending.delete(request);
 
-			logger.log({
+			await logger.log({
 				headers: data.http.headers,
 				method: data.http.method,
 				start: data.start,

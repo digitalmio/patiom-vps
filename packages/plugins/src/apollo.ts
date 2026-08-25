@@ -54,7 +54,7 @@ const createPatiomLoggerPlugin = (options: PatiomLoggerOptions) => {
 					const graphqlClientVersion =
 						request.http?.headers.get("x-graphql-client-version") ?? undefined;
 
-					logger.log({
+					await logger.log({
 						headers,
 						responseHeaders: response.http.headers,
 						operation: queryString,

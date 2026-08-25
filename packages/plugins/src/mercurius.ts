@@ -147,7 +147,7 @@ export function createPatiomMercuriusPlugin(
 					const headers = requestHeaders(stored.request);
 					const resHeaders = responseHeaders(stored.reply);
 
-					logger.log({
+					await logger.log({
 						headers,
 						responseHeaders: resHeaders,
 						operation: stored.source,
