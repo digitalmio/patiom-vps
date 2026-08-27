@@ -1,15 +1,9 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { apiKey } from "better-auth/plugins";
-import { reactStartCookies } from "better-auth/react-start";
+import { createPatiomAuth } from "@patiom/auth";
 import { env } from "@/env";
 import { db } from "@/lib/db";
 
-export const auth = betterAuth({
-	database: drizzleAdapter(db, {
-		provider: "pg",
-	}),
-	plugins: [apiKey({}), reactStartCookies()],
+export const auth = createPatiomAuth(db, {
+	reactStartCookies: true,
 	socialProviders: {
 		github: {
 			clientId: env.GITHUB_CLIENT_ID,

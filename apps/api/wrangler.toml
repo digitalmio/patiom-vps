@@ -1,0 +1,11 @@
+name = "patiom-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-20"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets:
+#   wrangler secret put DATABASE_URL
+#   wrangler secret put BETTER_AUTH_SECRET
+# Vars:
+#   BETTER_AUTH_URL = "https://patiom.dev" (web app base URL)
+# Local dev overrides via .dev.vars.

@@ -1,0 +1,174 @@
+// Query helpers for the analytics data-access API
+import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import type { Db } from "../client";
+import {
+	errorLogs,
+	fieldUsageStatsDaily,
+	operationStatsDaily,
+	operationStatsHourly,
+	recentOperations,
+	requestLogs,
+	schemaFields,
+} from "../schema";
+
+export type Granularity = "hour" | "day";
+
+export type RangeFilter = {
+	from?: Date;
+	to?: Date;
+};
+
+export async function getOperationStats(
+	db: Db,
+	projectId: string,
+	granularity: Granularity,
+	range: RangeFilter = {},
+) {
+	const view =
+		granularity === "hour" ? operationStatsHourly : operationStatsDaily;
+	const conditions = [eq(view.projectId, projectId)];
+	if (range.from) conditions.push(gte(view.bucket, range.from));
+	if (range.to) conditions.push(lte(view.bucket, range.to));
+
+	return db
+		.select()
+		.from(view)
+		.where(and(...conditions))
+		.orderBy(asc(view.bucket));
+}
+
+export async function getRecentOperations(
+	db: Db,
+	projectId: string,
+	limit = 20,
+) {
+	return db
+		.select()
+		.from(recentOperations)
+		.where(eq(recentOperations.projectId, projectId))
+		.orderBy(desc(recentOperations.totalRequests))
+		.limit(limit);
+}
+
+export async function getFieldUsage(
+	db: Db,
+	projectId: string,
+	range: RangeFilter & { limit?: number } = {},
+) {
+	const conditions = [eq(fieldUsageStatsDaily.projectId, projectId)];
+	if (range.from) conditions.push(gte(fieldUsageStatsDaily.bucket, range.from));
+	if (range.to) conditions.push(lte(fieldUsageStatsDaily.bucket, range.to));
+
+	return db
+		.select({
+			fieldId: fieldUsageStatsDaily.fieldId,
+			usageCount: fieldUsageStatsDaily.usageCount,
+			bucket: fieldUsageStatsDaily.bucket,
+			fieldPath: schemaFields.fieldPath,
+			parentType: schemaFields.parentType,
+		})
+		.from(fieldUsageStatsDaily)
+		.innerJoin(schemaFields, eq(schemaFields.id, fieldUsageStatsDaily.fieldId))
+		.where(and(...conditions))
+		.orderBy(desc(fieldUsageStatsDaily.usageCount))
+		.limit(range.limit ?? 25);
+}
+
+export type ErrorLogFilter = RangeFilter & {
+	operationName?: string;
+	limit?: number;
+	offset?: number;
+};
+
+export async function getErrorLogs(
+	db: Db,
+	projectId: string,
+	filter: ErrorLogFilter = {},
+) {
+	const conditions = [eq(errorLogs.projectId, projectId)];
+	if (filter.operationName)
+		conditions.push(eq(errorLogs.operationName, filter.operationName));
+	if (filter.from) conditions.push(gte(errorLogs.timestamp, filter.from));
+	if (filter.to) conditions.push(lte(errorLogs.timestamp, filter.to));
+
+	return db
+		.select()
+		.from(errorLogs)
+		.where(and(...conditions))
+		.orderBy(desc(errorLogs.timestamp))
+		.limit(filter.limit ?? 50)
+		.offset(filter.offset ?? 0);
+}
+
+export type RequestLogFilter = RangeFilter & {
+	operationName?: string;
+	statusCode?: number;
+	limit?: number;
+	offset?: number;
+};
+
+export async function getRequestLogs(
+	db: Db,
+	projectId: string,
+	filter: RequestLogFilter = {},
+) {
+	const conditions = [eq(requestLogs.projectId, projectId)];
+	if (filter.operationName)
+		conditions.push(eq(requestLogs.operationName, filter.operationName));
+	if (filter.statusCode != null)
+		conditions.push(eq(requestLogs.statusCode, filter.statusCode));
+	if (filter.from) conditions.push(gte(requestLogs.timestamp, filter.from));
+	if (filter.to) conditions.push(lte(requestLogs.timestamp, filter.to));
+
+	return db
+		.select()
+		.from(requestLogs)
+		.where(and(...conditions))
+		.orderBy(desc(requestLogs.timestamp))
+		.limit(filter.limit ?? 50)
+		.offset(filter.offset ?? 0);
+}
+
+export async function getDashboard(
+	db: Db,
+	projectId: string,
+	range: RangeFilter = {},
+) {
+	const conditions = [eq(requestLogs.projectId, projectId)];
+	if (range.from) conditions.push(gte(requestLogs.timestamp, range.from));
+	if (range.to) conditions.push(lte(requestLogs.timestamp, range.to));
+
+	const [totals, recentOperationsList, topFields, hourly] = await Promise.all([
+		db
+			.select({
+				totalRequests: count(),
+				errorCount: sql<number>`COALESCE(SUM(${requestLogs.errorCount}), 0)`,
+				avgLatencyMs: sql<number>`AVG(${requestLogs.elapsedMs})`,
+				p95LatencyMs: sql<number>`PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ${requestLogs.elapsedMs})`,
+			})
+			.from(requestLogs)
+			.where(and(...conditions)),
+		getRecentOperations(db, projectId, 10),
+		getFieldUsage(db, projectId, { ...range, limit: 10 }),
+		getOperationStats(db, projectId, "hour", range),
+	]);
+
+	const row = totals[0] ?? {
+		totalRequests: 0,
+		errorCount: 0,
+		avgLatencyMs: null,
+		p95LatencyMs: null,
+	};
+
+	return {
+		totalRequests: row.totalRequests,
+		errorCount: row.errorCount,
+		errorRatePct:
+			row.totalRequests > 0 ? (row.errorCount / row.totalRequests) * 100 : null,
+		avgLatencyMs: row.avgLatencyMs,
+		p95LatencyMs: row.p95LatencyMs,
+		recentOperations: recentOperationsList,
+		topFields,
+		hourly,
+	};
+}

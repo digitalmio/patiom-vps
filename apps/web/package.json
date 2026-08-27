@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
+    "@patiom/auth": "workspace:*",
     "@patiom/db": "workspace:*",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",

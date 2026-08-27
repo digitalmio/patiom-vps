@@ -32,6 +32,7 @@ import { Route as AppProjectProjectIdTypesRouteImport } from './routes/_app/proj
 import { Route as AppProjectProjectIdOperationsRouteImport } from './routes/_app/project.$projectId/operations'
 import { Route as AppProjectProjectIdFieldsRouteImport } from './routes/_app/project.$projectId/fields'
 import { Route as AppProjectProjectIdErrorsRouteImport } from './routes/_app/project.$projectId/errors'
+import { Route as AppProjectProjectIdApiKeysRouteImport } from './routes/_app/project.$projectId/api-keys'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -152,6 +153,12 @@ const AppProjectProjectIdErrorsRoute =
     path: '/errors',
     getParentRoute: () => AppProjectProjectIdRoute,
   } as any)
+const AppProjectProjectIdApiKeysRoute =
+  AppProjectProjectIdApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AppProjectProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/project/$projectId/api-keys': typeof AppProjectProjectIdApiKeysRoute
   '/project/$projectId/errors': typeof AppProjectProjectIdErrorsRoute
   '/project/$projectId/fields': typeof AppProjectProjectIdFieldsRoute
   '/project/$projectId/operations': typeof AppProjectProjectIdOperationsRoute
@@ -190,6 +198,7 @@ export interface FileRoutesByTo {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/project/$projectId/api-keys': typeof AppProjectProjectIdApiKeysRoute
   '/project/$projectId/errors': typeof AppProjectProjectIdErrorsRoute
   '/project/$projectId/fields': typeof AppProjectProjectIdFieldsRoute
   '/project/$projectId/operations': typeof AppProjectProjectIdOperationsRoute
@@ -216,6 +225,7 @@ export interface FileRoutesById {
   '/demo/form/simple': typeof DemoFormSimpleRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
+  '/_app/project/$projectId/api-keys': typeof AppProjectProjectIdApiKeysRoute
   '/_app/project/$projectId/errors': typeof AppProjectProjectIdErrorsRoute
   '/_app/project/$projectId/fields': typeof AppProjectProjectIdFieldsRoute
   '/_app/project/$projectId/operations': typeof AppProjectProjectIdOperationsRoute
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/project/$projectId/api-keys'
     | '/project/$projectId/errors'
     | '/project/$projectId/fields'
     | '/project/$projectId/operations'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/project/$projectId/api-keys'
     | '/project/$projectId/errors'
     | '/project/$projectId/fields'
     | '/project/$projectId/operations'
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/demo/form/simple'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
+    | '/_app/project/$projectId/api-keys'
     | '/_app/project/$projectId/errors'
     | '/_app/project/$projectId/fields'
     | '/_app/project/$projectId/operations'
@@ -482,10 +495,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProjectProjectIdErrorsRouteImport
       parentRoute: typeof AppProjectProjectIdRoute
     }
+    '/_app/project/$projectId/api-keys': {
+      id: '/_app/project/$projectId/api-keys'
+      path: '/api-keys'
+      fullPath: '/project/$projectId/api-keys'
+      preLoaderRoute: typeof AppProjectProjectIdApiKeysRouteImport
+      parentRoute: typeof AppProjectProjectIdRoute
+    }
   }
 }
 
 interface AppProjectProjectIdRouteChildren {
+  AppProjectProjectIdApiKeysRoute: typeof AppProjectProjectIdApiKeysRoute
   AppProjectProjectIdErrorsRoute: typeof AppProjectProjectIdErrorsRoute
   AppProjectProjectIdFieldsRoute: typeof AppProjectProjectIdFieldsRoute
   AppProjectProjectIdOperationsRoute: typeof AppProjectProjectIdOperationsRoute
@@ -494,6 +515,7 @@ interface AppProjectProjectIdRouteChildren {
 }
 
 const AppProjectProjectIdRouteChildren: AppProjectProjectIdRouteChildren = {
+  AppProjectProjectIdApiKeysRoute: AppProjectProjectIdApiKeysRoute,
   AppProjectProjectIdErrorsRoute: AppProjectProjectIdErrorsRoute,
   AppProjectProjectIdFieldsRoute: AppProjectProjectIdFieldsRoute,
   AppProjectProjectIdOperationsRoute: AppProjectProjectIdOperationsRoute,
