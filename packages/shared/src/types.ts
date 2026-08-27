@@ -17,6 +17,11 @@ export type LogMessage = {
 	projectId: string;
 	timestamp: string;
 
+	// Schema attribution — djb2 hash of the introspection the serving server
+	// is running. Lets the consumer stamp the exact schema version (rolling-
+	// deploy safe) and wait for that version to land before processing.
+	schemaHash?: number;
+
 	// GraphQL Operation
 	operation: string;
 	operationName?: string | null;

@@ -3,10 +3,20 @@ export {
 	getDashboard,
 	getErrorLogs,
 	getFieldUsage,
+	getFieldVersionHistory,
 	getOperationStats,
 	getRecentOperations,
 	getRequestLogs,
+	getSchemaUsage,
 } from "./analytics";
 export { validateToken } from "./auth";
-export { resolveFieldIds } from "./fields";
-export { findExistingSchema, getActiveSchemaVersion } from "./schema";
+export {
+	type CanonicalFieldInput,
+	ensureFields,
+	upsertFields,
+} from "./fields";
+export {
+	activateSchemaVersion,
+	findExistingSchema,
+	getActiveSchemaVersion,
+} from "./schema";

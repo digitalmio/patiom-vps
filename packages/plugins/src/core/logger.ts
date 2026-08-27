@@ -1,4 +1,5 @@
 import { type GraphQLSchema, introspectionFromSchema } from "graphql";
+import { createDjb2Hash } from "./hash";
 import { extractPatiomPayload } from "./payload";
 import type { PatiomLoggerOptions, PatiomPayloadOptions } from "./types";
 
@@ -67,9 +68,10 @@ async function attemptOnce(options: {
 }
 
 /**
- * Send an ingest POST with optional one-shot retry.
- * - `retry: true`  → on network error / 5xx, try once more, then warn.
- * - `retry: false` → fail fast (blocking mode), warn immediately.
+ * Send an ingest POST with retry.
+ * - `retry: false` → single attempt (blocking mode), warn on failure.
+ * - `retry: true`  → up to `maxAttempts` attempts (default 2) with
+ *   `retryDelayMs` (default 0) between attempts, then warn.
  * - 4xx is never retried (a bad token won't heal).
  * Never rejects; resolves once the final outcome is reached.
  */
@@ -79,28 +81,31 @@ async function sendWithRetry(options: {
 	body: string;
 	token: string;
 	retry: boolean;
+	maxAttempts?: number;
+	retryDelayMs?: number;
 	timeoutMs?: number;
 	label: string;
 }): Promise<void> {
 	const { retry, label } = options;
+	const maxAttempts = retry ? (options.maxAttempts ?? 2) : 1;
 	const warn = (detail: string) =>
 		console.warn(`Patiom: failed to send ${label}`, detail);
 
-	const first = await attemptOnce(options);
-	if (first === "success") return;
-	if (first === "fatal") {
-		warn("non-retryable error");
-		return;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		const result = await attemptOnce(options);
+		if (result === "success") return;
+		if (result === "fatal") {
+			warn("non-retryable error");
+			return;
+		}
+		if (attempt === maxAttempts) {
+			warn("network or server error, giving up after retries");
+			return;
+		}
+		if (options.retryDelayMs) {
+			await new Promise((resolve) => setTimeout(resolve, options.retryDelayMs));
+		}
 	}
-	if (!retry) {
-		warn("network or server error");
-		return;
-	}
-	const second = await attemptOnce(options);
-	if (second === "success") return;
-	warn(
-		second === "fatal" ? "non-retryable error on retry" : "failed after retry",
-	);
 }
 
 function createSchemaSyncer(options: {
@@ -109,22 +114,34 @@ function createSchemaSyncer(options: {
 	endpoint: string;
 	shouldSyncSchema: boolean;
 	schemaSyncDelay: number;
+	schemaRetryAttempts: number;
+	schemaRetryDelayMs: number;
 	flush: "background" | "blocking";
 	waitUntil?: (promise: Promise<unknown>) => void;
 	sendTimeoutMs?: number;
 }) {
 	let stopped = false;
 	let timeout: ReturnType<typeof setTimeout> | null = null;
+	let currentSchemaHash: number | undefined;
 	const {
 		fetch,
 		token,
 		endpoint,
 		shouldSyncSchema,
 		schemaSyncDelay,
+		schemaRetryAttempts,
+		schemaRetryDelayMs,
 		flush,
 		waitUntil,
 		sendTimeoutMs,
 	} = options;
+
+	// The schema gets more retries than logs: it is the anchor for exact
+	// schema-version attribution of every log message, so a missed schema sync
+	// degrades the whole pipeline. The worker-side retry loop (waiting for the
+	// version to land) covers whatever still slips through.
+	const SCHEMA_MAX_ATTEMPTS = schemaRetryAttempts;
+	const SCHEMA_RETRY_DELAY_MS = schemaRetryDelayMs;
 
 	const sendImmediately = (introspection: unknown): Promise<void> => {
 		const retry = flush !== "blocking";
@@ -135,6 +152,8 @@ function createSchemaSyncer(options: {
 			body: JSON.stringify({ schema: introspection }),
 			token,
 			retry,
+			maxAttempts: SCHEMA_MAX_ATTEMPTS,
+			retryDelayMs: SCHEMA_RETRY_DELAY_MS,
 			timeoutMs,
 			label: "schema sync",
 		});
@@ -149,6 +168,10 @@ function createSchemaSyncer(options: {
 		if (!shouldSyncSchema) return;
 
 		const introspection = introspectionFromSchema(schema);
+		// Same djb2 algorithm as worker-schema uses on the receiving side, and
+		// the same JSON serialization order (the introspection object itself is
+		// what gets sent), so the hashes match byte-for-byte.
+		currentSchemaHash = createDjb2Hash(JSON.stringify(introspection));
 
 		if (timeout) {
 			clearTimeout(timeout);
@@ -169,6 +192,8 @@ function createSchemaSyncer(options: {
 				body: JSON.stringify({ schema: introspection }),
 				token,
 				retry: true,
+				maxAttempts: SCHEMA_MAX_ATTEMPTS,
+				retryDelayMs: SCHEMA_RETRY_DELAY_MS,
 				label: "schema sync",
 			});
 		}, schemaSyncDelay);
@@ -181,7 +206,7 @@ function createSchemaSyncer(options: {
 		}
 	};
 
-	return { sendSchema, stop };
+	return { sendSchema, stop, getSchemaHash: () => currentSchemaHash };
 }
 
 export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
@@ -195,12 +220,14 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 
 	warnFetch(fetch);
 
-	const { sendSchema, stop } = createSchemaSyncer({
+	const { sendSchema, stop, getSchemaHash } = createSchemaSyncer({
 		fetch,
 		token: options.token,
 		endpoint,
 		shouldSyncSchema,
 		schemaSyncDelay: options.schemaSyncDelay ?? Math.random() * 5000,
+		schemaRetryAttempts: options.schemaRetryAttempts ?? 4,
+		schemaRetryDelayMs: options.schemaRetryDelayMs ?? 1000,
 		flush,
 		waitUntil,
 		sendTimeoutMs,
@@ -216,6 +243,7 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 			const payload = extractPatiomPayload({
 				...payloadOptions,
 				sendVariablesAsHash,
+				schemaHash: getSchemaHash(),
 			});
 			const retry = flush !== "blocking";
 			const timeoutMs = flush === "blocking" ? sendTimeoutMs : undefined;

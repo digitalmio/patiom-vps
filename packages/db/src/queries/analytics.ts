@@ -3,12 +3,14 @@ import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { Db } from "../client";
 import {
 	errorLogs,
+	fields,
 	fieldUsageStatsDaily,
+	fieldVersionPresence,
 	operationStatsDaily,
 	operationStatsHourly,
 	recentOperations,
 	requestLogs,
-	schemaFields,
+	schemaUsageDaily,
 } from "../schema";
 
 export type Granularity = "hour" | "day";
@@ -62,16 +64,68 @@ export async function getFieldUsage(
 	return db
 		.select({
 			fieldId: fieldUsageStatsDaily.fieldId,
+			fieldPath: fieldUsageStatsDaily.fieldPath,
 			usageCount: fieldUsageStatsDaily.usageCount,
 			bucket: fieldUsageStatsDaily.bucket,
-			fieldPath: schemaFields.fieldPath,
-			parentType: schemaFields.parentType,
+			parentType: fields.parentType,
 		})
 		.from(fieldUsageStatsDaily)
-		.innerJoin(schemaFields, eq(schemaFields.id, fieldUsageStatsDaily.fieldId))
+		.innerJoin(fields, eq(fields.id, fieldUsageStatsDaily.fieldId))
 		.where(and(...conditions))
 		.orderBy(desc(fieldUsageStatsDaily.usageCount))
 		.limit(range.limit ?? 25);
+}
+
+/**
+ * Request share per schema version — answers "in the last N hours, X% of
+ * calls used schema A".
+ */
+export async function getSchemaUsage(
+	db: Db,
+	projectId: string,
+	range: RangeFilter = {},
+) {
+	const conditions = [eq(schemaUsageDaily.projectId, projectId)];
+	if (range.from) conditions.push(gte(schemaUsageDaily.bucket, range.from));
+	if (range.to) conditions.push(lte(schemaUsageDaily.bucket, range.to));
+
+	const rows = await db
+		.select({
+			schemaVersionId: schemaUsageDaily.schemaVersionId,
+			requestCount: schemaUsageDaily.requestCount,
+		})
+		.from(schemaUsageDaily)
+		.where(and(...conditions));
+
+	const total = rows.reduce((sum, row) => sum + row.requestCount, 0);
+	return rows
+		.map((row) => ({
+			schemaVersionId: row.schemaVersionId,
+			requestCount: row.requestCount,
+			requestSharePct: total > 0 ? (row.requestCount / total) * 100 : null,
+		}))
+		.sort((a, b) => b.requestCount - a.requestCount);
+}
+
+/**
+ * For every canonical field: which schema versions contained it and when it
+ * was first/last seen. Pass `fieldPath` to scope to a single field.
+ */
+export async function getFieldVersionHistory(
+	db: Db,
+	projectId: string,
+	filter: { fieldPath?: string } = {},
+) {
+	const conditions = [eq(fieldVersionPresence.projectId, projectId)];
+	if (filter.fieldPath) {
+		conditions.push(eq(fieldVersionPresence.fieldPath, filter.fieldPath));
+	}
+
+	return db
+		.select()
+		.from(fieldVersionPresence)
+		.where(and(...conditions))
+		.orderBy(desc(fieldVersionPresence.lastSeenAt));
 }
 
 export type ErrorLogFilter = RangeFilter & {

@@ -8,14 +8,20 @@ export type Env = {
 	LOGS_QUEUE: Queue<LogMessage>;
 };
 
-// Reuse the DB connection within an isolate
-let db: Db | null = null;
-function getDb(url: string): Db {
-	db ??= createDb(url);
-	return db;
-}
+const app = new Hono<{ Bindings: Env; Variables: { db: Db } }>();
 
-const app = new Hono<{ Bindings: Env }>();
+// workerd cannot reuse a postgres.js client across request contexts
+// ("Cannot perform I/O on behalf of a different request") — create a fresh
+// connection per request and close it once the handler has finished.
+app.use("/api/ingest/*", async (c, next) => {
+	const db = createDb(c.env.DATABASE_URL);
+	c.set("db", db);
+	try {
+		await next();
+	} finally {
+		await db.$client.end().catch(() => {});
+	}
+});
 
 app.get("/", (c) => c.text("Hello from Patiom!"));
 
@@ -34,10 +40,7 @@ app.post("/api/ingest/:type", async (c) => {
 	}
 
 	// ...and if it's valid
-	const { isValidToken, projectData } = await validateToken(
-		getDb(c.env.DATABASE_URL),
-		token,
-	);
+	const { isValidToken, projectData } = await validateToken(c.get("db"), token);
 	if (!isValidToken || !projectData) {
 		return c.json({ error: "Unauthorized" }, 401);
 	}

@@ -12,6 +12,7 @@ function extractPatiomPayload({
 	variables,
 	responseHeaders,
 	sendVariablesAsHash,
+	schemaHash,
 	hasSetCookie,
 	graphqlClientName,
 	graphqlClientVersion,
@@ -61,6 +62,7 @@ function extractPatiomPayload({
 		variableHash: sendVariablesAsHash
 			? createDjb2Hash(JSON.stringify(variables ?? {}))
 			: undefined,
+		schemaHash,
 		method,
 		elapsed: Date.now() - start,
 		ip: clientIp,

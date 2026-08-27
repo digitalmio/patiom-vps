@@ -8,6 +8,8 @@
 // - operation_stats_hourly: Hourly operation metrics
 // - operation_stats_daily: Daily operation metrics
 // - field_usage_stats_daily: Daily field usage across all operations
+//   (grouped by canonical field ID — stable across schema versions)
+// - schema_usage_daily: Daily request counts per schema version
 // - recent_operations: Operation metrics for the last 24 hours
 // - error_logs: Rows that reported at least one GraphQL error
 
@@ -212,15 +214,35 @@ export const fieldUsageStatsDaily = pgView("field_usage_stats_daily", {
 	bucket: timestamp("bucket", { withTimezone: true }).notNull(),
 	projectId: text("project_id").notNull(),
 	fieldId: text("field_id").notNull(),
+	fieldPath: varchar("field_path", { length: 512 }).notNull(),
 	usageCount: bigint("usage_count", { mode: "number" }).notNull(),
+}).as(sql`
+	SELECT
+		date_trunc('day', rl.timestamp) AS bucket,
+		rl.project_id,
+		f.id AS field_id,
+		f.field_path,
+		COUNT(*) AS usage_count
+	FROM request_logs rl,
+		jsonb_array_elements_text(rl.requested_field_ids) AS requested_field_id
+	JOIN fields f ON f.id = requested_field_id
+	GROUP BY bucket, rl.project_id, f.id, f.field_path
+`);
+
+export const schemaUsageDaily = pgView("schema_usage_daily", {
+	bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+	projectId: text("project_id").notNull(),
+	schemaVersionId: text("schema_version_id").notNull(),
+	requestCount: bigint("request_count", { mode: "number" }).notNull(),
 }).as(sql`
 	SELECT
 		date_trunc('day', timestamp) AS bucket,
 		project_id,
-		field_id,
-		COUNT(*) AS usage_count
-	FROM request_logs, jsonb_array_elements_text(requested_field_ids) AS field_id
-	GROUP BY bucket, project_id, field_id
+		schema_version_id,
+		COUNT(*) AS request_count
+	FROM request_logs
+	WHERE schema_version_id IS NOT NULL
+	GROUP BY bucket, project_id, schema_version_id
 `);
 
 export const recentOperations = pgView("recent_operations", {

@@ -1,3 +1,4 @@
+export { canonicalFieldId } from "./fields";
 export type { GeoLocation } from "./geo";
 export {
 	extractFieldPaths,

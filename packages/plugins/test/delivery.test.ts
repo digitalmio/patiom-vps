@@ -1,6 +1,12 @@
-import { GraphQLObjectType, GraphQLSchema, GraphQLString } from "graphql";
+import {
+	GraphQLObjectType,
+	GraphQLSchema,
+	GraphQLString,
+	introspectionFromSchema,
+} from "graphql";
 import { describe, expect, it, vi } from "vitest";
 import { createPatiomLogger } from "../src/core/logger";
+import { createDjb2Hash } from "../src/core/hash";
 import { baseOptions, createControlledFetch, type Posted } from "./helpers";
 
 function makeLogger(overrides: Record<string, unknown> = {}) {
@@ -168,5 +174,69 @@ describe("delivery: schema sync modes", () => {
 		expect(fetch.calls).toBe(0);
 		await new Promise((r) => setTimeout(r, 20));
 		expect(fetch.calls).toBe(1);
+	});
+});
+
+describe("delivery: schema hash attribution", () => {
+	const testSchema = new GraphQLSchema({
+		query: new GraphQLObjectType({
+			name: "Query",
+			fields: { hello: { type: GraphQLString, resolve: () => "world" } },
+		}),
+	});
+
+	it("log payload carries no schemaHash before the schema sync", async () => {
+		const records: Posted[] = [];
+		const logger = createPatiomLogger(baseOptions(records));
+		await logPayload(logger);
+		await flush();
+		expect(records[0]?.body.schemaHash).toBeUndefined();
+	});
+
+	it("log payload carries the schema hash after the schema sync", async () => {
+		const records: Posted[] = [];
+		const logger = createPatiomLogger({
+			...baseOptions(records),
+			schemaSyncing: true,
+			schemaSyncDelay: 0,
+		});
+		await logger.sendSchema(testSchema);
+		await logPayload(logger);
+		await flush();
+		const expected = createDjb2Hash(
+			JSON.stringify(introspectionFromSchema(testSchema)),
+		);
+		expect(records[0]?.body.schemaHash).toBe(expected);
+	});
+
+	it("schema sync retries up to 4 attempts on 5xx (background)", async () => {
+		const fetch = createControlledFetch({ status: 503 });
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const { logger } = makeLogger({
+			fetch,
+			schemaSyncing: true,
+			schemaSyncDelay: 0,
+			schemaRetryAttempts: 4,
+			schemaRetryDelayMs: 1,
+		});
+		await logger.sendSchema(testSchema);
+		await new Promise((r) => setTimeout(r, 50));
+		expect(fetch.calls).toBe(4);
+		expect(warn).toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
+	it("schema sync fails fast in blocking mode (1 attempt)", async () => {
+		const fetch = createControlledFetch({ status: 503 });
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const { logger } = makeLogger({
+			fetch,
+			schemaSyncing: true,
+			flush: "blocking",
+		});
+		await logger.sendSchema(testSchema);
+		expect(fetch.calls).toBe(1);
+		expect(warn).toHaveBeenCalled();
+		warn.mockRestore();
 	});
 });

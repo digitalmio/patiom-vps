@@ -18,6 +18,8 @@ export type PatiomPayloadOptions = {
 	hasSetCookie?: boolean;
 	graphqlClientName?: string;
 	graphqlClientVersion?: string;
+	/** Injected by the logger from the schema syncer — not set by integrations. */
+	schemaHash?: number;
 	/**
 	 * HTTP status code of the response. Defaults to 200 when not provided
 	 * (execution-layer integrations like envelop have no response available).
@@ -32,6 +34,13 @@ export type PatiomPayload = {
 	operationName?: string | null;
 	variables?: Record<string, unknown> | null;
 	variableHash?: number;
+	/**
+	 * djb2 hash of the GraphQL schema introspection this server is currently
+	 * running. Lets the ingest pipeline attribute the log to the exact schema
+	 * version that served the request (rolling-deploy safe) and wait for that
+	 * version to land before processing.
+	 */
+	schemaHash?: number;
 	method: string;
 	elapsed: number;
 	ip?: string;
@@ -58,6 +67,16 @@ export type PatiomLoggerOptions = {
 	 * provided or `flush` is `"blocking"` (schema is sent immediately).
 	 */
 	schemaSyncDelay?: number;
+	/**
+	 * Retry budget for schema sync requests (the schema anchors exact
+	 * schema-version attribution of log messages, so it retries more than
+	 * logs). Defaults to 4 attempts. Always 1 in `blocking` mode (fail fast).
+	 */
+	schemaRetryAttempts?: number;
+	/**
+	 * Delay (ms) between schema sync retry attempts. Defaults to 1000.
+	 */
+	schemaRetryDelayMs?: number;
 	/**
 	 * Delivery mode for log and schema payloads.
 	 *

@@ -5,6 +5,7 @@ export {
 	gt,
 	gte,
 	inArray,
+	isNull,
 	like,
 	lt,
 	lte,

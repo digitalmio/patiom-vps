@@ -1,10 +1,16 @@
 import {
+	activateSchemaVersion,
+	and,
 	type Db,
 	schema as dbSchema,
+	desc,
 	eq,
 	findExistingSchema,
+	isNull,
+	ne,
+	upsertFields,
 } from "@patiom/db";
-import { createDjb2Hash } from "@patiom/shared";
+import { canonicalFieldId, createDjb2Hash } from "@patiom/shared";
 import type {
 	IntrospectionInputTypeRef,
 	IntrospectionOutputTypeRef,
@@ -116,6 +122,7 @@ export async function extractAndInsertFields(
 			const returnTypeString = getTypeString(field.type);
 			const isList = returnTypeString.includes("[");
 			const isNullable = !returnTypeString.includes("!");
+			const fieldPath = `${type.name}.${field.name}`;
 
 			// Extract arguments
 			const args = field.args?.map((arg) => ({
@@ -127,8 +134,9 @@ export async function extractAndInsertFields(
 
 			fieldsToInsert.push({
 				id: `${schemaVersionId}:${type.name}:${field.name}`,
+				fieldId: canonicalFieldId(projectId, fieldPath),
 				fieldName: field.name,
-				fieldPath: `${type.name}.${field.name}`,
+				fieldPath,
 				parentType: type.name,
 				returnType: returnTypeString,
 				isList,
@@ -144,9 +152,19 @@ export async function extractAndInsertFields(
 		}
 	}
 
-	// Batch insert all fields
+	// Upsert canonical fields first (schema_fields.field_id is a foreign key),
+	// then batch insert per-version fields
 	if (fieldsToInsert.length > 0) {
 		try {
+			await upsertFields(
+				db,
+				projectId,
+				fieldsToInsert.map((field) => ({
+					fieldPath: field.fieldPath,
+					parentType: field.parentType,
+					fieldName: field.fieldName,
+				})),
+			);
 			await db.insert(dbSchema.schemaFields).values(fieldsToInsert);
 		} catch (error) {
 			console.error("extractAndInsertFields: Database error", error);
@@ -183,7 +201,11 @@ export async function processSchemaIntrospection(
 	const existing = await findExistingSchema(db, projectId, schemaHash);
 
 	if (existing) {
-		// Schema unchanged - no work needed
+		// Schema unchanged — make sure this version is the project's current one.
+		// Re-deploying a previous schema (A→B→A) bumps activated_at so it becomes
+		// active again; the statement no-ops when this version is already newest.
+		await activateSchemaVersion(db, existing.id);
+
 		return {
 			schemaVersionId: existing.id,
 			isNewVersion: false,
@@ -234,10 +256,86 @@ export async function processSchemaIntrospection(
 		.set({ typeCount, fieldCount })
 		.where(eq(dbSchema.schemaVersions.id, schemaVersionId));
 
+	// Record the diff against the previous version
+	const changesSummary = await computeChangesSummary(
+		db,
+		projectId,
+		schemaVersionId,
+	);
+	if (changesSummary) {
+		await db
+			.update(dbSchema.schemaVersions)
+			.set({ changesSummary })
+			.where(eq(dbSchema.schemaVersions.id, schemaVersionId));
+	}
+
 	return {
 		schemaVersionId,
 		isNewVersion: true,
 		typeCount,
 		fieldCount,
 	};
+}
+
+/**
+ * Diff the new schema version against the previously active one and produce a
+ * changes summary (added/removed types and fields by stable field path).
+ */
+async function computeChangesSummary(
+	db: Db,
+	projectId: string,
+	newVersionId: string,
+) {
+	const previous = await db.query.schemaVersions.findFirst({
+		where: and(
+			eq(dbSchema.schemaVersions.projectId, projectId),
+			ne(dbSchema.schemaVersions.id, newVersionId),
+			isNull(dbSchema.schemaVersions.deletedAt),
+		),
+		orderBy: desc(dbSchema.schemaVersions.activatedAt),
+	});
+
+	if (!previous) return null;
+
+	const [previousFields, previousTypes] = await Promise.all([
+		db
+			.select({ fieldPath: dbSchema.schemaFields.fieldPath })
+			.from(dbSchema.schemaFields)
+			.where(eq(dbSchema.schemaFields.schemaVersionId, previous.id)),
+		db
+			.select({ typeName: dbSchema.schemaTypes.typeName })
+			.from(dbSchema.schemaTypes)
+			.where(eq(dbSchema.schemaTypes.schemaVersionId, previous.id)),
+	]);
+	const [currentFields, currentTypes] = await Promise.all([
+		db
+			.select({ fieldPath: dbSchema.schemaFields.fieldPath })
+			.from(dbSchema.schemaFields)
+			.where(eq(dbSchema.schemaFields.schemaVersionId, newVersionId)),
+		db
+			.select({ typeName: dbSchema.schemaTypes.typeName })
+			.from(dbSchema.schemaTypes)
+			.where(eq(dbSchema.schemaTypes.schemaVersionId, newVersionId)),
+	]);
+
+	const previousFieldPaths = new Set(previousFields.map((f) => f.fieldPath));
+	const currentFieldPaths = new Set(currentFields.map((f) => f.fieldPath));
+	const previousTypeNames = new Set(previousTypes.map((t) => t.typeName));
+	const currentTypeNames = new Set(currentTypes.map((t) => t.typeName));
+
+	return {
+		addedTypes: setDifference(currentTypeNames, previousTypeNames),
+		removedTypes: setDifference(previousTypeNames, currentTypeNames),
+		addedFields: setDifference(currentFieldPaths, previousFieldPaths),
+		removedFields: setDifference(previousFieldPaths, currentFieldPaths),
+	} satisfies {
+		addedTypes?: string[];
+		removedTypes?: string[];
+		addedFields?: string[];
+		removedFields?: string[];
+	};
+}
+
+function setDifference(set: Set<string>, exclude: Set<string>): string[] {
+	return [...set].filter((value) => !exclude.has(value));
 }

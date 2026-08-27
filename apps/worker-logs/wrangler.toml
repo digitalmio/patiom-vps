@@ -6,7 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 [[queues.consumers]]
   queue = "patiom-logs-queue"
   max_batch_size = 10
-  max_retries = 3
+  max_retries = 10
+  dead_letter_queue = "patiom-logs-dlq"
 
 # IP -> country lookups use the IPLocate API and are cached in the
 # `ip_geo_cache` DB table for IP_GEO_TTL_DAYS (default 5). The API key is a
