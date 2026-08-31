@@ -1,0 +1,68 @@
+# Deploys the backend Workers + demo to Cloudflare.
+#
+# One-time setup (see docs/DEPLOY_PLAN.md):
+#   - GitHub secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, DATABASE_URL
+#   - Per-worker secrets (wrangler secret put, run in apps/<name>):
+#       DATABASE_URL -> ingestor, worker-schema, worker-logs, api
+#       IPLOCATE_KEY -> worker-logs (optional)
+#       PATIOM_TOKEN -> demo
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Push DB schema
+        run: pnpm --filter @patiom/db migrate:push
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Create queues (idempotent)
+        run: |
+          for queue in patiom-schema-queue patiom-logs-queue patiom-schema-dlq patiom-logs-dlq; do
+            pnpm --filter @patiom/ingestor exec wrangler queues create "$queue" 2>/dev/null \
+              || echo "$queue already exists"
+          done
+
+      # Consumers before producers so no message lands on a missing consumer.
+      - name: Deploy worker-schema
+        run: pnpm --filter @patiom/worker-schema exec wrangler deploy
+
+      - name: Deploy worker-logs
+        run: pnpm --filter @patiom/worker-logs exec wrangler deploy
+
+      - name: Deploy ingestor
+        run: pnpm --filter @patiom/ingestor exec wrangler deploy
+
+      - name: Deploy api
+        run: pnpm --filter @patiom/api exec wrangler deploy
+
+      - name: Deploy demo
+        run: pnpm --filter @patiom/demo exec wrangler deploy

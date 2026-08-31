@@ -5,8 +5,8 @@ import {
 	introspectionFromSchema,
 } from "graphql";
 import { describe, expect, it, vi } from "vitest";
-import { createPatiomLogger } from "../src/core/logger";
 import { createDjb2Hash } from "../src/core/hash";
+import { createPatiomLogger } from "../src/core/logger";
 import { baseOptions, createControlledFetch, type Posted } from "./helpers";
 
 function makeLogger(overrides: Record<string, unknown> = {}) {

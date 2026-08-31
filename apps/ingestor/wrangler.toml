@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2026-08-20"
 compatibility_flags = ["nodejs_compat"]
 
+# Matches the SDK's built-in default endpoint, so client integrations
+# need no PATIOM_ENDPOINT env var.
+routes = [{ pattern = "ingest.patiom.dev", custom_domain = true }]
+
 [[queues.producers]]
   binding = "SCHEMA_QUEUE"
   queue = "patiom-schema-queue"

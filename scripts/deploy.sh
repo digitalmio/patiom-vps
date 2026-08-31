@@ -22,7 +22,7 @@ DATABASE_URL="${DATABASE_URL:?Set DATABASE_URL for drizzle-kit push}" \
 
 echo "==> Creating queues (idempotent)"
 for queue in patiom-schema-queue patiom-logs-queue patiom-schema-dlq patiom-logs-dlq; do
-  wrangler queues create "$queue" 2>/dev/null || echo "    $queue already exists"
+  pnpm --filter @patiom/ingestor exec wrangler queues create "$queue" 2>/dev/null || echo "    $queue already exists"
 done
 
 deploy() {

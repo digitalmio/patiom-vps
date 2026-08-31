@@ -9,7 +9,7 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"migrate:dev": "drizzle-kit migrate dev",
-		"migrate:push": "drizzle-kit push"
+		"migrate:push": "drizzle-kit push --force"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.44.6",
