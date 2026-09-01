@@ -13,11 +13,11 @@ import {
 } from "@patiom/db";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { db, eq, schema } from "@/lib/db";
+import { getDb, eq, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 async function assertProjectAccess(projectId: string, userId: string) {
-	const rows = await db
+	const rows = await getDb()
 		.select({ userId: schema.projects.userId })
 		.from(schema.projects)
 		.where(eq(schema.projects.id, projectId))
@@ -49,7 +49,7 @@ export const projectOperations = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getOperationStats(db, data.projectId, data.granularity, {
+		return getOperationStats(getDb(), data.projectId, data.granularity, {
 			from: data.from,
 			to: data.to,
 		});
@@ -65,7 +65,7 @@ export const projectRecentOperations = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getRecentOperations(db, data.projectId, data.limit ?? 20);
+		return getRecentOperations(getDb(), data.projectId, data.limit ?? 20);
 	});
 
 export const projectFieldUsage = createServerFn({ method: "GET" })
@@ -80,7 +80,7 @@ export const projectFieldUsage = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getFieldUsage(db, data.projectId, {
+		return getFieldUsage(getDb(), data.projectId, {
 			from: data.from,
 			to: data.to,
 			limit: data.limit,
@@ -92,7 +92,7 @@ export const projectSchemaUsage = createServerFn({ method: "GET" })
 	.inputValidator(projectIdWithRange)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getSchemaUsage(db, data.projectId, { from: data.from, to: data.to });
+		return getSchemaUsage(getDb(), data.projectId, { from: data.from, to: data.to });
 	});
 
 export const projectFieldVersionHistory = createServerFn({ method: "GET" })
@@ -102,7 +102,7 @@ export const projectFieldVersionHistory = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getFieldVersionHistory(db, data.projectId, {
+		return getFieldVersionHistory(getDb(), data.projectId, {
 			fieldPath: data.fieldPath,
 		});
 	});
@@ -121,7 +121,7 @@ export const projectErrorLogs = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		const rows = await getErrorLogs(db, data.projectId, {
+		const rows = await getErrorLogs(getDb(), data.projectId, {
 			operationName: data.operationName,
 			from: data.from,
 			to: data.to,
@@ -151,7 +151,7 @@ export const projectRequestLogs = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		const rows = await getRequestLogs(db, data.projectId, {
+		const rows = await getRequestLogs(getDb(), data.projectId, {
 			operationName: data.operationName,
 			statusCode: data.statusCode,
 			from: data.from,
@@ -173,7 +173,7 @@ export const projectDashboard = createServerFn({ method: "GET" })
 	.inputValidator(projectIdWithRange)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getDashboard(db, data.projectId, { from: data.from, to: data.to });
+		return getDashboard(getDb(), data.projectId, { from: data.from, to: data.to });
 	});
 
 export const projectClients = createServerFn({ method: "GET" })
@@ -190,7 +190,7 @@ export const projectClients = createServerFn({ method: "GET" })
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
 		return getClients(
-			db,
+			getDb(),
 			data.projectId,
 			{ from: data.from, to: data.to },
 			{
@@ -215,7 +215,7 @@ export const projectLocations = createServerFn({ method: "GET" })
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
 		return getLocations(
-			db,
+			getDb(),
 			data.projectId,
 			{ from: data.from, to: data.to },
 			{
@@ -239,7 +239,7 @@ export const projectOperationCardinality = createServerFn({ method: "GET" })
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
 		return getOperationCardinality(
-			db,
+			getDb(),
 			data.projectId,
 			{ from: data.from, to: data.to },
 			{ limit: data.limit },

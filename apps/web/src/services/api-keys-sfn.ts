@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getAuth } from "@/lib/auth";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const createProjectApiKey = createServerFn({ method: "POST" })
@@ -12,7 +12,7 @@ export const createProjectApiKey = createServerFn({ method: "POST" })
 		}),
 	)
 	.handler(async ({ context, data }) => {
-		return auth.api.createApiKey({
+		return getAuth().api.createApiKey({
 			body: {
 				userId: context.user.id,
 				name: data.name,
@@ -26,7 +26,7 @@ export const listProjectApiKeys = createServerFn({ method: "GET" })
 	.middleware([isAuthenticatedMiddleware])
 	.inputValidator(z.object({ projectId: z.string() }))
 	.handler(async ({ context, data }) => {
-		const keys = await auth.api.listApiKeys({
+		const keys = await getAuth().api.listApiKeys({
 			query: { userId: context.user.id },
 		});
 		return keys.filter(
@@ -40,5 +40,5 @@ export const deleteProjectApiKey = createServerFn({ method: "POST" })
 	.middleware([isAuthenticatedMiddleware])
 	.inputValidator(z.object({ keyId: z.string() }))
 	.handler(async ({ data }) => {
-		return auth.api.deleteApiKey({ body: { keyId: data.keyId } });
+		return getAuth().api.deleteApiKey({ body: { keyId: data.keyId } });
 	});

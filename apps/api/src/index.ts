@@ -34,7 +34,10 @@ export default {
 		// Fresh DB connection per request: workerd freezes idle sockets between
 		// events, so pooled connections go stale. Closed after the response via
 		// waitUntil once all resolver queries have completed.
-		const db = createDb(env.DATABASE_URL);
+		const db = createDb(env.HYPERDRIVE.connectionString, false, {
+			prepare: false,
+			max: 5,
+		});
 		const auth = createPatiomAuth(db, {
 			secret: env.BETTER_AUTH_SECRET,
 			baseURL: env.BETTER_AUTH_URL,

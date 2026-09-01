@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { and, db, desc, eq, gt, schema } from "@/lib/db";
+import { and, getDb, desc, eq, gt, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const getProjectErrors = createServerFn({ method: "GET" })
@@ -9,7 +9,7 @@ export const getProjectErrors = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => {
 		// Note: Project ownership is verified at the route level in beforeLoad
 		// So we don't need to check it again here
-		const errors = await db
+		const errors = await getDb()
 			.select()
 			.from(schema.requestLogs)
 			.where(

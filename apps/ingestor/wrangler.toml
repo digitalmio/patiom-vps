@@ -15,5 +15,11 @@ routes = [{ pattern = "ingest.patiom.dev", custom_domain = true }]
   binding = "LOGS_QUEUE"
   queue = "patiom-logs-queue"
 
-# DATABASE_URL should be provided as a secret in production:
-#   wrangler secret put DATABASE_URL
+# DATABASE_URL is no longer used. DB access goes through the shared
+# Hyperdrive binding below. Local dev connects directly using:
+#   CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+# (see scripts/dev)
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "00000000-0000-0000-0000-000000000000" # TODO: real id after `wrangler hyperdrive create patiom-primary`

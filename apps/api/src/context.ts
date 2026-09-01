@@ -3,7 +3,7 @@ import { and, type Db, eq, schema } from "@patiom/db";
 import type { YogaInitialContext } from "graphql-yoga";
 
 export type ApiEnv = {
-	DATABASE_URL: string;
+	HYPERDRIVE: Hyperdrive;
 	BETTER_AUTH_SECRET: string;
 	BETTER_AUTH_URL: string;
 };

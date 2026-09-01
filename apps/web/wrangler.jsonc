@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "patiom-web",
+  "main": "src/entry.worker.ts",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "routes": [{ "pattern": "patiom.dev", "custom_domain": true }],
+
+  "vars": {
+    "BETTER_AUTH_URL": "https://patiom.dev",
+    "DATABASE_LOGGER": "false"
+  },
+
+  // Shared with the other workers; local dev connects directly via
+  // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE (see scripts/dev).
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

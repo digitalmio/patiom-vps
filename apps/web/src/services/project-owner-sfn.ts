@@ -1,13 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { db, eq, schema } from "@/lib/db";
+import { getDb, eq, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const isProjectOwner = createServerFn({ method: "GET" })
 	.middleware([isAuthenticatedMiddleware])
 	.inputValidator(z.object({ userId: z.string(), projectId: z.string() }))
 	.handler(async ({ context, data }) => {
-		const project = await db
+		const project = await getDb()
 			.select({ userId: schema.projects.userId })
 			.from(schema.projects)
 			.where(eq(schema.projects.id, data.projectId))

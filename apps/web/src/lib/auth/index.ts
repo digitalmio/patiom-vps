@@ -1,13 +1,21 @@
-import { createPatiomAuth } from "@patiom/auth";
+import { createPatiomAuth, type PatiomAuth } from "@patiom/auth";
 import { env } from "@/env";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
+import { requestContext } from "@/lib/request-context";
 
-export const auth = createPatiomAuth(db, {
-	reactStartCookies: true,
-	socialProviders: {
-		github: {
-			clientId: env.GITHUB_CLIENT_ID,
-			clientSecret: env.GITHUB_CLIENT_SECRET,
+export function getAuth(): PatiomAuth {
+	const store = requestContext.getStore();
+	if (!store?.env) {
+		throw new Error("getAuth() called outside the request context");
+	}
+	store.auth ??= createPatiomAuth(getDb(), {
+		reactStartCookies: true,
+		socialProviders: {
+			github: {
+				clientId: env.GITHUB_CLIENT_ID,
+				clientSecret: env.GITHUB_CLIENT_SECRET,
+			},
 		},
-	},
-});
+	});
+	return store.auth;
+}

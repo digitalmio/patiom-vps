@@ -3,9 +3,6 @@ import { z } from "zod";
 
 export const env = createEnv({
 	server: {
-		DATABASE_URL: z.url().startsWith("postgresql://"),
-		DATABASE_LOGGER: z.boolean().optional().default(false),
-
 		BETTER_AUTH_SECRET: z.string().min(1),
 		BETTER_AUTH_URL: z.url().min(1),
 

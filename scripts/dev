@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Local dev launcher for all Cloudflare apps.
+#
+# Usage:
+#   scripts/dev <ingestor|api|worker-logs|worker-schema|web> [extra args...]
+#   e.g. scripts/dev worker-logs --port 8789
+#
+# Hyperdrive bindings resolve via the wrangler fallback env var (no pooling
+# or caching locally — a direct connection to the local Postgres). Override
+# it by exporting your own value before running this script.
+set -euo pipefail
+
+export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="${CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:-postgres://patiom:patiom@localhost:5432/patiom}"
+
+app="${1:?usage: scripts/dev <ingestor|api|worker-logs|worker-schema|web> [args...]}"
+shift
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+case "$app" in
+web)
+	# web runs through the Cloudflare vite plugin (workerd), not wrangler dev
+	cd "$root/apps/web"
+	exec pnpm dev "$@"
+	;;
+ingestor | api | worker-logs | worker-schema)
+	cd "$root/apps/$app"
+	exec npx wrangler dev "$@"
+	;;
+*)
+	echo "unknown app: $app" >&2
+	exit 1
+	;;
+esac

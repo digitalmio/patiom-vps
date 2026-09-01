@@ -3,7 +3,7 @@ import type { LogMessage, SchemaMessage } from "@patiom/shared";
 import { type Context, Hono, type Next } from "hono";
 
 export type Env = {
-	DATABASE_URL: string;
+	HYPERDRIVE: Hyperdrive;
 	SCHEMA_QUEUE: Queue<SchemaMessage>;
 	LOGS_QUEUE: Queue<LogMessage>;
 };
@@ -18,7 +18,10 @@ app.use("/log", dbMiddleware);
 app.use("/schema", dbMiddleware);
 
 async function dbMiddleware(c: Context, next: Next) {
-	const db = createDb(c.env.DATABASE_URL);
+	const db = createDb(c.env.HYPERDRIVE.connectionString, false, {
+		prepare: false,
+		max: 5,
+	});
 	c.set("db", db);
 	try {
 		await next();

@@ -1,5 +1,6 @@
 export {
 	type ClientBreakdownOptions,
+	type Granularity,
 	getClients,
 	getDashboard,
 	getErrorLogs,

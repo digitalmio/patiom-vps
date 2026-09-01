@@ -3,7 +3,7 @@ import type { SchemaMessage } from "@patiom/shared";
 import { processSchemaIntrospection } from "./processor";
 
 export type Env = {
-	DATABASE_URL: string;
+	HYPERDRIVE: Hyperdrive;
 	SCHEMA_QUEUE: Queue<SchemaMessage>;
 };
 
@@ -12,7 +12,10 @@ export default {
 		// workerd freezes idle sockets between invocations — a module-cached
 		// postgres.js client dies after ~a minute idle ("Failed query" with an
 		// empty cause). Use a fresh connection per batch, close it when done.
-		const database = createDb(env.DATABASE_URL);
+		const database = createDb(env.HYPERDRIVE.connectionString, false, {
+			prepare: false,
+			max: 5,
+		});
 		try {
 			await processBatch(batch, database);
 		} finally {

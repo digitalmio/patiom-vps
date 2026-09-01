@@ -4,8 +4,14 @@ compatibility_date = "2026-08-20"
 compatibility_flags = ["nodejs_compat"]
 
 # Secrets:
-#   wrangler secret put DATABASE_URL
 #   wrangler secret put BETTER_AUTH_SECRET
 # Vars:
 #   BETTER_AUTH_URL = "https://patiom.dev" (web app base URL)
 # Local dev overrides via .dev.vars.
+# DB access goes through the shared Hyperdrive binding below; local dev
+# connects directly using CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE
+# (see scripts/dev).
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "00000000-0000-0000-0000-000000000000" # TODO: real id after `wrangler hyperdrive create patiom-primary`

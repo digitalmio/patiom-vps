@@ -6,8 +6,19 @@ export type { PostgresJsDatabase };
 
 export type Db = PostgresJsDatabase<typeof schema>;
 
-export function createDb(connectionString: string, logger = false) {
-	return drizzle(postgres(connectionString), {
+export type PostgresClientOptions = {
+	/** Max pool size. Keep small (e.g. 5) when going through Hyperdrive. */
+	max?: number;
+	/** Hyperdrive requires prepare: false for postgres.js. */
+	prepare?: boolean;
+};
+
+export function createDb(
+	connectionString: string,
+	logger = false,
+	options: PostgresClientOptions = {},
+) {
+	return drizzle(postgres(connectionString, options), {
 		schema,
 		casing: "snake_case",
 		logger,

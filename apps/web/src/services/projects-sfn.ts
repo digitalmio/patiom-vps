@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { db, eq, schema } from "@/lib/db";
+import { getDb, eq, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const getUserProjects = createServerFn({ method: "GET" })
@@ -7,7 +7,7 @@ export const getUserProjects = createServerFn({ method: "GET" })
 	.handler(async ({ context }) => {
 		const { user } = context;
 
-		const projects = await db
+		const projects = await getDb()
 			.select()
 			.from(schema.projects)
 			.where(eq(schema.projects.userId, user.id))

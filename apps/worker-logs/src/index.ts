@@ -20,7 +20,7 @@ import { resolveIpGeo } from "./ip-geo";
 type SchemaVersion = typeof schema.schemaVersions.$inferSelect;
 
 export type Env = {
-	DATABASE_URL: string;
+	HYPERDRIVE: Hyperdrive;
 	LOGS_QUEUE: Queue<LogMessage>;
 	IPLOCATE_KEY?: string;
 	IP_GEO_TTL_DAYS?: string;
@@ -56,7 +56,10 @@ export default {
 		// workerd freezes idle sockets between invocations — a module-cached
 		// postgres.js client dies after ~a minute idle ("Failed query" with an
 		// empty cause). Use a fresh connection per batch, close it when done.
-		const database = createDb(env.DATABASE_URL);
+		const database = createDb(env.HYPERDRIVE.connectionString, false, {
+			prepare: false,
+			max: 5,
+		});
 		try {
 			// bind: workerd's waitUntil throws "Illegal invocation" when the
 			// detached method reference loses its `this`.
