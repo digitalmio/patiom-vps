@@ -29,6 +29,7 @@
 		{
 			"includes": [
 				"apps/web/src/components/ui/**",
+				"apps/web/src/components/nodus/**",
 				"apps/web/src/routes/demo/**",
 				"apps/web/src/styles.css"
 			],

@@ -1,0 +1,174 @@
+import {
+	getDashboard,
+	getErrorLogs,
+	getFieldUsage,
+	getFieldVersionHistory,
+	getOperationStats,
+	getRecentOperations,
+	getRequestLogs,
+	getSchemaUsage,
+} from "@patiom/db";
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { db, eq, schema } from "@/lib/db";
+import { isAuthenticatedMiddleware } from "./auth-middleware";
+
+async function assertProjectAccess(projectId: string, userId: string) {
+	const rows = await db
+		.select({ userId: schema.projects.userId })
+		.from(schema.projects)
+		.where(eq(schema.projects.id, projectId))
+		.limit(1);
+
+	if (!rows.length) {
+		throw new Error("Project not found");
+	}
+	if (rows[0].userId !== userId) {
+		throw new Error("You do not have permission to access this project");
+	}
+}
+
+const projectIdWithRange = z.object({
+	projectId: z.string(),
+	from: z.coerce.date().optional(),
+	to: z.coerce.date().optional(),
+});
+
+export const projectOperations = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			granularity: z.enum(["hour", "day"]).default("day"),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getOperationStats(db, data.projectId, data.granularity, {
+			from: data.from,
+			to: data.to,
+		});
+	});
+
+export const projectRecentOperations = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			limit: z.number().int().min(1).max(100).optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getRecentOperations(db, data.projectId, data.limit ?? 20);
+	});
+
+export const projectFieldUsage = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+			limit: z.number().int().optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getFieldUsage(db, data.projectId, {
+			from: data.from,
+			to: data.to,
+			limit: data.limit,
+		});
+	});
+
+export const projectSchemaUsage = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(projectIdWithRange)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getSchemaUsage(db, data.projectId, { from: data.from, to: data.to });
+	});
+
+export const projectFieldVersionHistory = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({ projectId: z.string(), fieldPath: z.string().optional() }),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getFieldVersionHistory(db, data.projectId, {
+			fieldPath: data.fieldPath,
+		});
+	});
+
+export const projectErrorLogs = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			operationName: z.string().optional(),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+			limit: z.number().int().optional(),
+			offset: z.number().int().optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		const rows = await getErrorLogs(db, data.projectId, {
+			operationName: data.operationName,
+			from: data.from,
+			to: data.to,
+			limit: data.limit,
+			offset: data.offset,
+		});
+		// TanStack Start's serializer models raw jsonb as `{ [x: string]: {} }`.
+		return rows.map((row) => ({
+			...row,
+			// biome-ignore lint/complexity/noBannedTypes: matches TanStack Start's serializer type for raw jsonb
+			errors: (row.errors ?? null) as { [x: string]: {} } | null,
+		}));
+	});
+
+export const projectRequestLogs = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			operationName: z.string().optional(),
+			statusCode: z.number().int().optional(),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+			limit: z.number().int().optional(),
+			offset: z.number().int().optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		const rows = await getRequestLogs(db, data.projectId, {
+			operationName: data.operationName,
+			statusCode: data.statusCode,
+			from: data.from,
+			to: data.to,
+			limit: data.limit,
+			offset: data.offset,
+		});
+		// TanStack Start's serializer models raw jsonb as `{ [x: string]: {} }`;
+		// align the inferred `unknown` with that shape.
+		return rows.map((row) => ({
+			...row,
+			// biome-ignore lint/complexity/noBannedTypes: matches TanStack Start's serializer type for raw jsonb
+			errors: (row.errors ?? null) as { [x: string]: {} } | null,
+		}));
+	});
+
+export const projectDashboard = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(projectIdWithRange)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getDashboard(db, data.projectId, { from: data.from, to: data.to });
+	});

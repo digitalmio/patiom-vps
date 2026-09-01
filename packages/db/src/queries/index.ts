@@ -8,6 +8,7 @@ export {
 	getRecentOperations,
 	getRequestLogs,
 	getSchemaUsage,
+	type RangeFilter,
 } from "./analytics";
 export { validateToken } from "./auth";
 export {
