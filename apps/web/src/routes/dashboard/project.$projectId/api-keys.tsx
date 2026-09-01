@@ -7,7 +7,7 @@ import {
 	listProjectApiKeys,
 } from "@/services/api-keys-sfn";
 
-export const Route = createFileRoute("/_app/project/$projectId/api-keys")({
+export const Route = createFileRoute("/dashboard/project/$projectId/api-keys")({
 	component: RouteComponent,
 	staticData: {
 		title: "API Keys",

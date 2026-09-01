@@ -50,7 +50,10 @@ auto-provisions DNS + certificates.
 ## User-side prerequisites
 
 - [ ] Zones `patiom.dev` + `swql.dev` in Cloudflare account
-- [ ] PlanetScale Postgres database + role (pooled connection string)
+- [ ] PlanetScale Postgres database: **PS-10 non-HA (arm64), ~$10/mo** — pooled
+      connection string. Upgrade to HA ($30/mo) when revenue justifies. Cheap
+      fixed instance is viable because CF Queues buffer ingestion bursts;
+      worker-logs writes at a steady trickle.
 - [ ] GitHub secrets: `CLOUDFLARE_API_TOKEN` (Workers Scripts:Edit + Queues:Edit),
       `CLOUDFLARE_ACCOUNT_ID`, `DATABASE_URL`
 - [ ] One-time worker secrets (local `wrangler secret put`):

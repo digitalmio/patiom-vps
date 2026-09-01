@@ -86,7 +86,10 @@ export function AppSidebar({
 	projects: Array<typeof schema.projects.$inferSelect>;
 }) {
 	const matchRoute = useMatchRoute();
-	const routeProjectId = matchRoute({ to: "/project/$projectId", fuzzy: true });
+	const routeProjectId = matchRoute({
+		to: "/dashboard/project/$projectId",
+		fuzzy: true,
+	});
 
 	return (
 		<Sidebar collapsible="icon" {...props}>

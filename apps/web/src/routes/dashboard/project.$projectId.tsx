@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { isProjectOwner } from "@/services/project-owner-sfn";
 
-export const Route = createFileRoute("/_app/project/$projectId")({
+export const Route = createFileRoute("/dashboard/project/$projectId")({
 	beforeLoad: async ({ context, params }) => {
 		// Access userData from parent _app route context
 		const userId = context.userData?.id;
@@ -20,11 +20,11 @@ export const Route = createFileRoute("/_app/project/$projectId")({
 
 			if (firstProject) {
 				throw redirect({
-					to: "/project/$projectId",
+					to: "/dashboard/project/$projectId",
 					params: { projectId: firstProject },
 				});
 			}
-			throw redirect({ to: "/" });
+			throw redirect({ to: "/dashboard" });
 		}
 
 		// Pass projectId to child routes via context

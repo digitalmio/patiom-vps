@@ -70,7 +70,9 @@ export function ProjectSwitcher({
 							return (
 								<DropdownMenuItem
 									key={project.name}
-									onClick={() => navigate({ to: `/project/${project.id}/` })}
+									onClick={() =>
+										navigate({ to: `/dashboard/project/${project.id}` })
+									}
 									className="gap-2 p-2"
 								>
 									<div className="flex size-6 items-center justify-center rounded-md border">

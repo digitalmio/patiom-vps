@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getProjectErrors } from "@/services/errors-sfn";
 
-export const Route = createFileRoute("/_app/project/$projectId/errors")({
+export const Route = createFileRoute("/dashboard/project/$projectId/errors")({
 	component: RouteComponent,
 	staticData: {
 		title: "Project Errors",

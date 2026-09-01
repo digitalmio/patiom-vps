@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_app/project/$projectId/types")({
+export const Route = createFileRoute("/dashboard/project/$projectId/types")({
 	component: RouteComponent,
 	staticData: {
 		title: "Project Types",
@@ -8,5 +8,5 @@ export const Route = createFileRoute("/_app/project/$projectId/types")({
 });
 
 function RouteComponent() {
-	return <div>Hello "/_app/project/$projectId/types"!</div>;
+	return <div>Hello "/dashboard/project/$projectId/types"!</div>;
 }

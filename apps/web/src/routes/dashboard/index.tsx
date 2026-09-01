@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_app/")({
+export const Route = createFileRoute("/dashboard/")({
 	component: RouteComponent,
 	staticData: {
 		title: "All Projects",
@@ -12,7 +12,7 @@ function RouteComponent() {
 		<div className="flex flex-1 flex-col gap-4">
 			<div className="grid auto-rows-min gap-4 md:grid-cols-3">
 				<div className="bg-muted/50 aspect-video rounded-xl">
-					<Link to="/test">Test</Link>
+					<Link to="/dashboard/test">Test</Link>
 				</div>
 				<div className="bg-muted/50 aspect-video rounded-xl" />
 				<div className="bg-muted/50 aspect-video rounded-xl" />

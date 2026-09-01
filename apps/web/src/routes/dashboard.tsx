@@ -10,7 +10,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getUserData } from "@/services/auth-sfn";
 import { getUserProjects } from "@/services/projects-sfn";
 
-export const Route = createFileRoute("/_app")({
+export const Route = createFileRoute("/dashboard")({
 	component: RouteComponent,
 	beforeLoad: async () => {
 		const userData = await getUserData();
