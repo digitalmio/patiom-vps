@@ -1,5 +1,5 @@
-import { type Db, eq, lt, schema } from "@patiom/db";
 import type { GeoLocation } from "@patiom/shared";
+import { hashIp } from "./hash";
 
 export type GeoEnv = {
 	IPLOCATE_KEY?: string;
@@ -8,8 +8,9 @@ export type GeoEnv = {
 
 const API_URL = "https://iplocate.io/api/lookup";
 const DEFAULT_TTL_DAYS = 5;
-const PRUNE_INTERVAL_MS = 15 * 60 * 1000;
 const FAILURE_BACKOFF_MS = 5 * 60 * 1000;
+// Synthetic origin used solely as a Cache API key namespace.
+const CACHE_KEY_BASE = "https://geo-cache.patiom.internal/geo";
 
 const empty: GeoLocation = {
 	countryCode: null,
@@ -19,7 +20,6 @@ const empty: GeoLocation = {
 	longitude: null,
 };
 
-let lastPrune = 0;
 // In-isolate short-circuit for IPs whose API lookup recently failed (e.g.
 // quota exhausted or API downtime) so we don't hammer the API from the same
 // isolate.
@@ -33,65 +33,65 @@ type IpLocateResponse = {
 	longitude?: number | null;
 };
 
+type WaitUntil = (promise: Promise<unknown>) => void;
+
 /**
- * Resolve an IP to a GeoLocation, using the DB cache first and falling back to
- * the IPLocate HTTP API on a cache miss. Successful lookups are cached with a
- * TTL (default 5 days).
+ * Resolve an IP to a GeoLocation using the Workers Cache API (keyed by the
+ * SHA-256 hash of the IP — raw addresses are never persisted anywhere) and
+ * falling back to the IPLocate HTTP API on a cache miss. Successful lookups
+ * are cached at the edge with a TTL (default 5 days).
  */
 export async function resolveIpGeo(
-	db: Db,
 	env: GeoEnv,
 	ip: string | null | undefined,
+	waitUntil?: WaitUntil,
 ): Promise<GeoLocation> {
 	if (!ip) return empty;
 
+	const cacheKey = await hashIp(ip);
 	const now = Date.now();
+	return resolveIpGeoInner(env, ip, cacheKey, now, waitUntil);
+}
 
-	// 1. Cache hit?
-	const cached = await db.query.ipGeoCache.findFirst({
-		where: eq(schema.ipGeoCache.ip, ip),
-	});
-	if (cached && cached.expiresAt.getTime() > now) {
-		return {
-			countryCode: cached.countryCode,
-			countryName: cached.countryName,
-			city: cached.city,
-			latitude: null,
-			longitude: null,
-		};
-	}
-
-	// 2. Skip the API if it recently failed for this IP
-	const lastFail = failedIps.get(ip);
+async function resolveIpGeoInner(
+	env: GeoEnv,
+	ip: string,
+	cacheKey: string,
+	now: number,
+	waitUntil?: WaitUntil,
+): Promise<GeoLocation> {
+	// 1. Skip the API if it recently failed for this IP
+	const lastFail = failedIps.get(cacheKey);
 	if (lastFail && now - lastFail < FAILURE_BACKOFF_MS) {
 		return empty;
+	}
+
+	// 2. Edge cache lookup
+	const cache = caches.default;
+	const cacheRequest = new Request(`${CACHE_KEY_BASE}/${cacheKey}`);
+	// workers-types narrows match() to `never` in some versions — accept both shapes.
+	const cached = (await cache.match(cacheRequest)) as Response | undefined;
+	if (cached) {
+		return (await cached.json()) as GeoLocation;
 	}
 
 	// 3. Cache miss -> call the API
 	const geo = await lookupFromApi(env, ip);
 	if (geo.countryCode) {
-		const expiresAt = new Date(now + ttlMs(env));
-		await db
-			.insert(schema.ipGeoCache)
-			.values({
-				ip,
-				countryCode: geo.countryCode,
-				countryName: geo.countryName,
-				city: geo.city,
-				expiresAt,
-			})
-			.onConflictDoUpdate({
-				target: schema.ipGeoCache.ip,
-				set: {
-					countryCode: geo.countryCode,
-					countryName: geo.countryName,
-					city: geo.city,
-					updatedAt: new Date(),
-					expiresAt,
-				},
-			});
+		const stored = new Response(JSON.stringify(geo), {
+			headers: {
+				"Content-Type": "application/json",
+				"Cache-Control": `public, s-maxage=${ttlSeconds(env)}`,
+			},
+		});
+		const put = cache.put(cacheRequest, stored.clone());
+		if (waitUntil) {
+			waitUntil(put);
+		} else {
+			await put;
+		}
 	} else {
-		failedIps.set(ip, now);
+		failedIps.set(cacheKey, now);
 	}
 
 	return geo;
@@ -126,26 +126,8 @@ async function lookupFromApi(env: GeoEnv, ip: string): Promise<GeoLocation> {
 	}
 }
 
-/**
- * Opportunistically delete expired cache rows. Runs at most once per
- * PRUNE_INTERVAL_MS across the lifetime of the isolate.
- */
-export async function pruneExpiredGeoCache(db: Db): Promise<void> {
-	const now = Date.now();
-	if (now - lastPrune < PRUNE_INTERVAL_MS) return;
-	lastPrune = now;
-
-	try {
-		await db
-			.delete(schema.ipGeoCache)
-			.where(lt(schema.ipGeoCache.expiresAt, new Date(now)));
-	} catch (error) {
-		console.error("Failed to prune IP geo cache", error);
-	}
-}
-
-function ttlMs(env: GeoEnv): number {
+function ttlSeconds(env: GeoEnv): number {
 	const days = Number(env.IP_GEO_TTL_DAYS ?? DEFAULT_TTL_DAYS);
 	const safe = Number.isFinite(days) && days > 0 ? days : DEFAULT_TTL_DAYS;
-	return safe * 24 * 60 * 60 * 1000;
+	return safe * 24 * 60 * 60;
 }

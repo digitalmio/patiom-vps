@@ -32,8 +32,10 @@ import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr
 import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ssr.data-only'
 import { Route as DashboardProjectProjectIdTypesRouteImport } from './routes/dashboard/project.$projectId/types'
 import { Route as DashboardProjectProjectIdOperationsRouteImport } from './routes/dashboard/project.$projectId/operations'
+import { Route as DashboardProjectProjectIdLocationsRouteImport } from './routes/dashboard/project.$projectId/locations'
 import { Route as DashboardProjectProjectIdFieldsRouteImport } from './routes/dashboard/project.$projectId/fields'
 import { Route as DashboardProjectProjectIdErrorsRouteImport } from './routes/dashboard/project.$projectId/errors'
+import { Route as DashboardProjectProjectIdClientsRouteImport } from './routes/dashboard/project.$projectId/clients'
 import { Route as DashboardProjectProjectIdApiKeysRouteImport } from './routes/dashboard/project.$projectId/api-keys'
 
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -155,6 +157,12 @@ const DashboardProjectProjectIdOperationsRoute =
     path: '/operations',
     getParentRoute: () => DashboardProjectProjectIdRoute,
   } as any)
+const DashboardProjectProjectIdLocationsRoute =
+  DashboardProjectProjectIdLocationsRouteImport.update({
+    id: '/locations',
+    path: '/locations',
+    getParentRoute: () => DashboardProjectProjectIdRoute,
+  } as any)
 const DashboardProjectProjectIdFieldsRoute =
   DashboardProjectProjectIdFieldsRouteImport.update({
     id: '/fields',
@@ -165,6 +173,12 @@ const DashboardProjectProjectIdErrorsRoute =
   DashboardProjectProjectIdErrorsRouteImport.update({
     id: '/errors',
     path: '/errors',
+    getParentRoute: () => DashboardProjectProjectIdRoute,
+  } as any)
+const DashboardProjectProjectIdClientsRoute =
+  DashboardProjectProjectIdClientsRouteImport.update({
+    id: '/clients',
+    path: '/clients',
     getParentRoute: () => DashboardProjectProjectIdRoute,
   } as any)
 const DashboardProjectProjectIdApiKeysRoute =
@@ -192,8 +206,10 @@ export interface FileRoutesByFullPath {
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
   '/dashboard/project/$projectId/api-keys': typeof DashboardProjectProjectIdApiKeysRoute
+  '/dashboard/project/$projectId/clients': typeof DashboardProjectProjectIdClientsRoute
   '/dashboard/project/$projectId/errors': typeof DashboardProjectProjectIdErrorsRoute
   '/dashboard/project/$projectId/fields': typeof DashboardProjectProjectIdFieldsRoute
+  '/dashboard/project/$projectId/locations': typeof DashboardProjectProjectIdLocationsRoute
   '/dashboard/project/$projectId/operations': typeof DashboardProjectProjectIdOperationsRoute
   '/dashboard/project/$projectId/types': typeof DashboardProjectProjectIdTypesRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
@@ -218,8 +234,10 @@ export interface FileRoutesByTo {
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
   '/dashboard/project/$projectId/api-keys': typeof DashboardProjectProjectIdApiKeysRoute
+  '/dashboard/project/$projectId/clients': typeof DashboardProjectProjectIdClientsRoute
   '/dashboard/project/$projectId/errors': typeof DashboardProjectProjectIdErrorsRoute
   '/dashboard/project/$projectId/fields': typeof DashboardProjectProjectIdFieldsRoute
+  '/dashboard/project/$projectId/locations': typeof DashboardProjectProjectIdLocationsRoute
   '/dashboard/project/$projectId/operations': typeof DashboardProjectProjectIdOperationsRoute
   '/dashboard/project/$projectId/types': typeof DashboardProjectProjectIdTypesRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
@@ -247,8 +265,10 @@ export interface FileRoutesById {
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
   '/dashboard/project/$projectId/api-keys': typeof DashboardProjectProjectIdApiKeysRoute
+  '/dashboard/project/$projectId/clients': typeof DashboardProjectProjectIdClientsRoute
   '/dashboard/project/$projectId/errors': typeof DashboardProjectProjectIdErrorsRoute
   '/dashboard/project/$projectId/fields': typeof DashboardProjectProjectIdFieldsRoute
+  '/dashboard/project/$projectId/locations': typeof DashboardProjectProjectIdLocationsRoute
   '/dashboard/project/$projectId/operations': typeof DashboardProjectProjectIdOperationsRoute
   '/dashboard/project/$projectId/types': typeof DashboardProjectProjectIdTypesRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
@@ -277,8 +297,10 @@ export interface FileRouteTypes {
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
     | '/dashboard/project/$projectId/api-keys'
+    | '/dashboard/project/$projectId/clients'
     | '/dashboard/project/$projectId/errors'
     | '/dashboard/project/$projectId/fields'
+    | '/dashboard/project/$projectId/locations'
     | '/dashboard/project/$projectId/operations'
     | '/dashboard/project/$projectId/types'
     | '/demo/start/ssr/data-only'
@@ -303,8 +325,10 @@ export interface FileRouteTypes {
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
     | '/dashboard/project/$projectId/api-keys'
+    | '/dashboard/project/$projectId/clients'
     | '/dashboard/project/$projectId/errors'
     | '/dashboard/project/$projectId/fields'
+    | '/dashboard/project/$projectId/locations'
     | '/dashboard/project/$projectId/operations'
     | '/dashboard/project/$projectId/types'
     | '/demo/start/ssr/data-only'
@@ -331,8 +355,10 @@ export interface FileRouteTypes {
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
     | '/dashboard/project/$projectId/api-keys'
+    | '/dashboard/project/$projectId/clients'
     | '/dashboard/project/$projectId/errors'
     | '/dashboard/project/$projectId/fields'
+    | '/dashboard/project/$projectId/locations'
     | '/dashboard/project/$projectId/operations'
     | '/dashboard/project/$projectId/types'
     | '/demo/start/ssr/data-only'
@@ -525,6 +551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectProjectIdOperationsRouteImport
       parentRoute: typeof DashboardProjectProjectIdRoute
     }
+    '/dashboard/project/$projectId/locations': {
+      id: '/dashboard/project/$projectId/locations'
+      path: '/locations'
+      fullPath: '/dashboard/project/$projectId/locations'
+      preLoaderRoute: typeof DashboardProjectProjectIdLocationsRouteImport
+      parentRoute: typeof DashboardProjectProjectIdRoute
+    }
     '/dashboard/project/$projectId/fields': {
       id: '/dashboard/project/$projectId/fields'
       path: '/fields'
@@ -539,6 +572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProjectProjectIdErrorsRouteImport
       parentRoute: typeof DashboardProjectProjectIdRoute
     }
+    '/dashboard/project/$projectId/clients': {
+      id: '/dashboard/project/$projectId/clients'
+      path: '/clients'
+      fullPath: '/dashboard/project/$projectId/clients'
+      preLoaderRoute: typeof DashboardProjectProjectIdClientsRouteImport
+      parentRoute: typeof DashboardProjectProjectIdRoute
+    }
     '/dashboard/project/$projectId/api-keys': {
       id: '/dashboard/project/$projectId/api-keys'
       path: '/api-keys'
@@ -551,8 +591,10 @@ declare module '@tanstack/react-router' {
 
 interface DashboardProjectProjectIdRouteChildren {
   DashboardProjectProjectIdApiKeysRoute: typeof DashboardProjectProjectIdApiKeysRoute
+  DashboardProjectProjectIdClientsRoute: typeof DashboardProjectProjectIdClientsRoute
   DashboardProjectProjectIdErrorsRoute: typeof DashboardProjectProjectIdErrorsRoute
   DashboardProjectProjectIdFieldsRoute: typeof DashboardProjectProjectIdFieldsRoute
+  DashboardProjectProjectIdLocationsRoute: typeof DashboardProjectProjectIdLocationsRoute
   DashboardProjectProjectIdOperationsRoute: typeof DashboardProjectProjectIdOperationsRoute
   DashboardProjectProjectIdTypesRoute: typeof DashboardProjectProjectIdTypesRoute
   DashboardProjectProjectIdIndexRoute: typeof DashboardProjectProjectIdIndexRoute
@@ -562,8 +604,12 @@ const DashboardProjectProjectIdRouteChildren: DashboardProjectProjectIdRouteChil
   {
     DashboardProjectProjectIdApiKeysRoute:
       DashboardProjectProjectIdApiKeysRoute,
+    DashboardProjectProjectIdClientsRoute:
+      DashboardProjectProjectIdClientsRoute,
     DashboardProjectProjectIdErrorsRoute: DashboardProjectProjectIdErrorsRoute,
     DashboardProjectProjectIdFieldsRoute: DashboardProjectProjectIdFieldsRoute,
+    DashboardProjectProjectIdLocationsRoute:
+      DashboardProjectProjectIdLocationsRoute,
     DashboardProjectProjectIdOperationsRoute:
       DashboardProjectProjectIdOperationsRoute,
     DashboardProjectProjectIdTypesRoute: DashboardProjectProjectIdTypesRoute,

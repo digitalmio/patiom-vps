@@ -1,8 +1,11 @@
 import {
+	getClients,
 	getDashboard,
 	getErrorLogs,
 	getFieldUsage,
 	getFieldVersionHistory,
+	getLocations,
+	getOperationCardinality,
 	getOperationStats,
 	getRecentOperations,
 	getRequestLogs,
@@ -39,7 +42,7 @@ export const projectOperations = createServerFn({ method: "GET" })
 	.inputValidator(
 		z.object({
 			projectId: z.string(),
-			granularity: z.enum(["hour", "day"]).default("day"),
+			granularity: z.enum(["minute", "hour", "day"]).default("day"),
 			from: z.coerce.date().optional(),
 			to: z.coerce.date().optional(),
 		}),
@@ -171,4 +174,74 @@ export const projectDashboard = createServerFn({ method: "GET" })
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
 		return getDashboard(db, data.projectId, { from: data.from, to: data.to });
+	});
+
+export const projectClients = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+			limit: z.number().int().min(1).max(200).optional(),
+			offset: z.number().int().min(0).optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getClients(
+			db,
+			data.projectId,
+			{ from: data.from, to: data.to },
+			{
+				limit: data.limit,
+				offset: data.offset,
+			},
+		);
+	});
+
+export const projectLocations = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			groupBy: z.enum(["country", "city"]).default("country"),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+			limit: z.number().int().min(1).max(200).optional(),
+			offset: z.number().int().min(0).optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getLocations(
+			db,
+			data.projectId,
+			{ from: data.from, to: data.to },
+			{
+				groupBy: data.groupBy,
+				limit: data.limit,
+				offset: data.offset,
+			},
+		);
+	});
+
+export const projectOperationCardinality = createServerFn({ method: "GET" })
+	.middleware([isAuthenticatedMiddleware])
+	.inputValidator(
+		z.object({
+			projectId: z.string(),
+			from: z.coerce.date().optional(),
+			to: z.coerce.date().optional(),
+			limit: z.number().int().min(1).max(50).optional(),
+		}),
+	)
+	.handler(async ({ context, data }) => {
+		await assertProjectAccess(data.projectId, context.user.id);
+		return getOperationCardinality(
+			db,
+			data.projectId,
+			{ from: data.from, to: data.to },
+			{ limit: data.limit },
+		);
 	});

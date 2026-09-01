@@ -1,3 +1,4 @@
+import { anonymizeQuery } from "./anonymize";
 import { createDjb2Hash } from "./hash";
 import type { PatiomPayload, PatiomPayloadOptions } from "./types";
 
@@ -17,6 +18,7 @@ function extractPatiomPayload({
 	graphqlClientName,
 	graphqlClientVersion,
 	statusCode,
+	anonymize,
 }: PatiomPayloadOptions & { sendVariablesAsHash: boolean }): PatiomPayload {
 	const forwardedFor = headers.get("x-forwarded-for");
 	const ips = forwardedFor
@@ -56,7 +58,7 @@ function extractPatiomPayload({
 	return {
 		graphqlClientName,
 		graphqlClientVersion,
-		operation,
+		operation: anonymize ? anonymizeQuery(operation) : operation,
 		operationName,
 		variables: sendVariablesAsHash ? undefined : variables,
 		variableHash: sendVariablesAsHash

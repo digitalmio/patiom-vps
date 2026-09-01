@@ -14,7 +14,8 @@ import {
 	parseUserAgent,
 } from "@patiom/shared";
 import type { IntrospectionQuery } from "graphql";
-import { pruneExpiredGeoCache, resolveIpGeo } from "./ip-geo";
+import { hashIp } from "./hash";
+import { resolveIpGeo } from "./ip-geo";
 
 type SchemaVersion = typeof schema.schemaVersions.$inferSelect;
 
@@ -47,13 +48,19 @@ function splitFieldPath(fieldPath: string): {
 }
 
 export default {
-	async queue(batch: MessageBatch<LogMessage>, env: Env) {
+	async queue(
+		batch: MessageBatch<LogMessage>,
+		env: Env,
+		ctx: { waitUntil: (promise: Promise<unknown>) => void },
+	) {
 		// workerd freezes idle sockets between invocations — a module-cached
 		// postgres.js client dies after ~a minute idle ("Failed query" with an
 		// empty cause). Use a fresh connection per batch, close it when done.
 		const database = createDb(env.DATABASE_URL);
 		try {
-			await processBatch(batch, env, database);
+			// bind: workerd's waitUntil throws "Illegal invocation" when the
+			// detached method reference loses its `this`.
+			await processBatch(batch, env, database, ctx.waitUntil.bind(ctx));
 		} finally {
 			await database.$client.end().catch(() => {});
 		}
@@ -64,9 +71,8 @@ async function processBatch(
 	batch: MessageBatch<LogMessage>,
 	env: Env,
 	database: Db,
+	waitUntil: (promise: Promise<unknown>) => void,
 ) {
-	await pruneExpiredGeoCache(database);
-
 	for (const message of batch.messages) {
 		const data = message.body;
 
@@ -101,8 +107,11 @@ async function processBatch(
 			// Step 2: Parse user-agent
 			const userAgentInfo = parseUserAgent(data.userAgent);
 
-			// Step 3: Parse IP geolocation (DB-cached IPLocate lookup)
-			const geoInfo = await resolveIpGeo(database, env, data.ip);
+			// Step 3: Parse IP geolocation (edge-cached IPLocate lookup). The raw
+			// IP is used for resolution only — the SHA-256 hash is stored so no
+			// PII address is persisted.
+			const geoInfo = await resolveIpGeo(env, data.ip, waitUntil);
+			const ipHash = data.ip ? await hashIp(data.ip) : null;
 
 			// Step 4: Parse GraphQL query to extract field paths (with schema introspection if available)
 			const introspection = activeSchema?.introspectionData
@@ -171,7 +180,7 @@ async function processBatch(
 				hasSetCookie: data.hasSetCookie,
 				referer: data.referer || null,
 				userAgent: data.userAgent || null,
-				ip: data.ip || null,
+				ip: ipHash,
 
 				// Parsed User Agent
 				browserName: userAgentInfo.browserName,
@@ -204,6 +213,7 @@ async function processBatch(
 				hasOperation: !!data.operation,
 				operationLength: data.operation?.length,
 				error: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
 			});
 			await message.retry({ delaySeconds: 5 });
 		}

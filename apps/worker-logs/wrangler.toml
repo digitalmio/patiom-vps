@@ -9,9 +9,9 @@ compatibility_flags = ["nodejs_compat"]
   max_retries = 10
   dead_letter_queue = "patiom-logs-dlq"
 
-# IP -> country lookups use the IPLocate API and are cached in the
-# `ip_geo_cache` DB table for IP_GEO_TTL_DAYS (default 5). The API key is a
-# secret:
+# IP -> country lookups use the IPLocate API, cached at the edge via the
+# Workers Cache API (keyed by SHA-256 of the IP) for IP_GEO_TTL_DAYS
+# (default 5). The API key is a secret:
 #   wrangler secret put IPLOCATE_KEY
 # vars = { IP_GEO_TTL_DAYS = "5" }
 

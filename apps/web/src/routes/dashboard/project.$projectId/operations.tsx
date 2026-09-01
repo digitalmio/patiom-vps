@@ -26,12 +26,17 @@ import {
 	totalsFromOperationStats,
 } from "@/lib/operations-aggregate";
 import {
+	defaultGranularity,
 	rangeFromPreset,
 	TIME_RANGE_PRESETS,
+	type TimeGranularity,
 	type TimeRangePreset,
 } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
-import { projectOperations } from "@/services/analytics-sfn";
+import {
+	projectOperationCardinality,
+	projectOperations,
+} from "@/services/analytics-sfn";
 
 export const Route = createFileRoute(
 	"/dashboard/project/$projectId/operations",
@@ -42,7 +47,7 @@ export const Route = createFileRoute(
 	},
 	validateSearch: (search: Record<string, unknown>) => ({
 		range: (search.range as TimeRangePreset) ?? ("24h" as const),
-		granularity: (search.granularity as "hour" | "day") ?? ("hour" as const),
+		granularity: (search.granularity as TimeGranularity) ?? ("hour" as const),
 	}),
 });
 
@@ -70,6 +75,14 @@ function RouteComponent() {
 				data: { projectId, granularity, from: prevFrom, to: from },
 			}),
 	});
+	const cardinalityQuery = useQuery({
+		queryKey: ["project-operations-cardinality", projectId, range],
+		queryFn: () =>
+			projectOperationCardinality({
+				data: { projectId, from, to, limit: 5 },
+			}),
+	});
+	const cardinality = cardinalityQuery.data ?? [];
 
 	const rows = statsQuery.data ?? [];
 	const totals = useMemo(() => totalsFromOperationStats(rows), [rows]);
@@ -105,7 +118,7 @@ function RouteComponent() {
 					time: new Date(row.bucket).toLocaleString(undefined, {
 						month: "short",
 						day: "numeric",
-						...(granularity === "hour"
+						...(granularity !== "day"
 							? { hour: "2-digit" as const, minute: "2-digit" as const }
 							: {}),
 					}),
@@ -149,7 +162,7 @@ function RouteComponent() {
 									search: (prev) => ({
 										...prev,
 										range: preset.value,
-										granularity: preset.value === "24h" ? "hour" : "day",
+										granularity: defaultGranularity(preset.value),
 									}),
 								})
 							}
@@ -283,6 +296,51 @@ function RouteComponent() {
 					)}
 				</div>
 			</div>
+
+			<TableCard>
+				<table className="w-full">
+					<thead>
+						<tr>
+							<Th>Top operations — request cardinality</Th>
+							<Th className="text-right">Requests</Th>
+							<Th className="text-right">Distinct variables</Th>
+							<Th className="text-right">Distinct responses</Th>
+							<Th className="text-right">Distinct visitors</Th>
+						</tr>
+					</thead>
+					<tbody>
+						{cardinality.map((row) => (
+							<Tr key={row.operationName ?? "__unnamed__"}>
+								<Td className="font-medium">
+									{row.operationName ?? "(unnamed)"}
+								</Td>
+								<Td className="text-right tabular-nums">
+									{row.totalRequests.toLocaleString()}
+								</Td>
+								<Td className="text-right tabular-nums">
+									{row.distinctVariables.toLocaleString()}
+								</Td>
+								<Td className="text-right tabular-nums">
+									{row.distinctResponses.toLocaleString()}
+								</Td>
+								<Td className="text-right tabular-nums">
+									{row.distinctIps.toLocaleString()}
+								</Td>
+							</Tr>
+						))}
+						{cardinality.length === 0 && (
+							<tr>
+								<td colSpan={5}>
+									<EmptyState
+										title="No cardinality data"
+										description="Distinct counts appear here once traffic flows through your API."
+									/>
+								</td>
+							</tr>
+						)}
+					</tbody>
+				</table>
+			</TableCard>
 
 			<TableCard
 				footer={

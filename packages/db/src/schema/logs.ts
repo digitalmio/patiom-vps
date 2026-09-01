@@ -66,7 +66,7 @@ export const requestLogs = pgTable(
 		hasSetCookie: boolean("has_set_cookie").default(false),
 		referer: text("referer"),
 		userAgent: text("user_agent"),
-		ip: varchar("ip", { length: 45 }), // IPv6 max length
+		ip: varchar("ip", { length: 64 }), // SHA-256 hex of the raw client IP
 
 		// Parsed User Agent (from bowser)
 		browserName: varchar("browser_name", { length: 50 }),
@@ -274,7 +274,7 @@ export const errorLogs = pgView("error_logs", {
 	elapsedMs: integer("elapsed_ms"),
 	statusCode: integer("status_code"),
 	errors: jsonb("errors"),
-	ip: varchar("ip", { length: 45 }),
+	ip: varchar("ip", { length: 64 }),
 	userAgent: text("user_agent"),
 }).as(sql`
 	SELECT

@@ -1,9 +1,12 @@
 export {
-	type Granularity,
+	type ClientBreakdownOptions,
+	getClients,
 	getDashboard,
 	getErrorLogs,
 	getFieldUsage,
 	getFieldVersionHistory,
+	getLocations,
+	getOperationCardinality,
 	getOperationStats,
 	getRecentOperations,
 	getRequestLogs,

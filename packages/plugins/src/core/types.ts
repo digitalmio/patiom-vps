@@ -25,6 +25,8 @@ export type PatiomPayloadOptions = {
 	 * (execution-layer integrations like envelop have no response available).
 	 */
 	statusCode?: number;
+	/** Set by the logger from the plugin's `anonymize` option. */
+	anonymize?: boolean;
 };
 
 export type PatiomPayload = {
@@ -59,6 +61,14 @@ export type PatiomLoggerOptions = {
 	token: string;
 	endpoint?: string;
 	sendVariablesAsHash?: boolean;
+	/**
+	 * Send operations in anonymized form: argument values, aliases and other
+	 * literal data are stripped from the query text before it leaves your
+	 * server. Field selection structure is preserved, so field-usage
+	 * analytics keep working. Variables are still hashed (or hashed only,
+	 * see `sendVariablesAsHash`). Defaults to `false`.
+	 */
+	anonymize?: boolean;
 	schemaSyncing?: boolean;
 	/**
 	 * Debounce delay (ms) before the schema sync request is sent. Only used in

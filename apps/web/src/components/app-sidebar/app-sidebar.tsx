@@ -4,11 +4,13 @@ import {
 	AlertCircle,
 	Boxes,
 	FolderDot,
+	Globe,
 	Grid3x3,
 	LayoutDashboard,
 	MessageCircle,
 	Plus,
 	Settings,
+	Users,
 } from "lucide-react";
 import type * as React from "react";
 import { NavProjects } from "@/components/app-sidebar/nav-projects";
@@ -36,6 +38,16 @@ const data = {
 			name: "Operations",
 			url: "operations",
 			icon: Activity,
+		},
+		{
+			name: "Clients",
+			url: "clients",
+			icon: Users,
+		},
+		{
+			name: "Locations",
+			url: "locations",
+			icon: Globe,
 		},
 		{
 			name: "Fields",

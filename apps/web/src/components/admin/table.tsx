@@ -121,10 +121,8 @@ export function PaginationFooter({
 	total: number;
 }) {
 	return (
-		<>
-			<p className="text-muted-foreground text-sm">
-				{total === 0 ? "0 results" : `${from}–${to} of ${total}`}
-			</p>
-		</>
+		<p className="text-muted-foreground text-sm">
+			{total === 0 ? "0 results" : `${from}–${to} of ${total}`}
+		</p>
 	);
 }

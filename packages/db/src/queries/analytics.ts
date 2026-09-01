@@ -13,7 +13,7 @@ import {
 	schemaUsageDaily,
 } from "../schema";
 
-export type Granularity = "hour" | "day";
+export type Granularity = "minute" | "hour" | "day";
 
 export type RangeFilter = {
 	from?: Date;
@@ -26,6 +26,45 @@ export async function getOperationStats(
 	granularity: Granularity,
 	range: RangeFilter = {},
 ) {
+	if (granularity === "minute") {
+		// Minute buckets are only meaningful for short ranges and have no
+		// materialized view — aggregate straight off request_logs.
+		const conditions = [eq(requestLogs.projectId, projectId)];
+		if (range.from) conditions.push(gte(requestLogs.timestamp, range.from));
+		if (range.to) conditions.push(lte(requestLogs.timestamp, range.to));
+
+		const trunc = sql`date_trunc('minute', ${requestLogs.timestamp})`;
+		return db
+			.select({
+				bucket: sql<Date>`${trunc}`,
+				projectId: requestLogs.projectId,
+				operationName: requestLogs.operationName,
+				totalRequests: count(),
+				avgLatencyMs: sql<number | null>`AVG(${requestLogs.elapsedMs})`,
+				minLatencyMs: sql<number | null>`MIN(${requestLogs.elapsedMs})`,
+				maxLatencyMs: sql<number | null>`MAX(${requestLogs.elapsedMs})`,
+				p50LatencyMs: sql<
+					number | null
+				>`PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${requestLogs.elapsedMs})`,
+				p95LatencyMs: sql<
+					number | null
+				>`PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ${requestLogs.elapsedMs})`,
+				p99LatencyMs: sql<
+					number | null
+				>`PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY ${requestLogs.elapsedMs})`,
+				totalResponseSizeBytes: sql<
+					number | null
+				>`COALESCE(SUM(${requestLogs.responseSizeBytes}), 0)`,
+				errorCount: sql<
+					number | null
+				>`COALESCE(SUM(${requestLogs.errorCount}), 0)`,
+			})
+			.from(requestLogs)
+			.where(and(...conditions))
+			.groupBy(trunc, requestLogs.projectId, requestLogs.operationName)
+			.orderBy(asc(trunc));
+	}
+
 	const view =
 		granularity === "hour" ? operationStatsHourly : operationStatsDaily;
 	const conditions = [eq(view.projectId, projectId)];
@@ -181,6 +220,118 @@ export async function getRequestLogs(
 		.orderBy(desc(requestLogs.timestamp))
 		.limit(filter.limit ?? 50)
 		.offset(filter.offset ?? 0);
+}
+
+/**
+ * Request volume, latency and errors per GraphQL client (name + version as
+ * reported by the plugin, e.g. `x-graphql-client-name` headers).
+ */
+export type ClientBreakdownOptions = {
+	limit?: number;
+	offset?: number;
+};
+
+export async function getClients(
+	db: Db,
+	projectId: string,
+	range: RangeFilter = {},
+	options: ClientBreakdownOptions = {},
+) {
+	const conditions = [eq(requestLogs.projectId, projectId)];
+	if (range.from) conditions.push(gte(requestLogs.timestamp, range.from));
+	if (range.to) conditions.push(lte(requestLogs.timestamp, range.to));
+
+	return db
+		.select({
+			clientName: requestLogs.graphqlClientName,
+			clientVersion: requestLogs.graphqlClientVersion,
+			totalRequests: count(),
+			// Window over the grouped COUNT so each row carries the grand total
+			// for share-of-traffic computations without a second query.
+			totalAllRequests: sql<number>`SUM(COUNT(*)) OVER ()`,
+			errorCount: sql<number>`COALESCE(SUM(${requestLogs.errorCount}), 0)`,
+			avgLatencyMs: sql<number | null>`AVG(${requestLogs.elapsedMs})`,
+			p95LatencyMs: sql<
+				number | null
+			>`PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ${requestLogs.elapsedMs})`,
+			lastSeenAt: sql<Date>`MAX(${requestLogs.timestamp})`,
+		})
+		.from(requestLogs)
+		.where(and(...conditions))
+		.groupBy(requestLogs.graphqlClientName, requestLogs.graphqlClientVersion)
+		.orderBy(desc(count()))
+		.limit(options.limit ?? 50)
+		.offset(options.offset ?? 0);
+}
+
+/**
+ * Request volume per geography. Group by `country` (default) or `city`.
+ */
+export async function getLocations(
+	db: Db,
+	projectId: string,
+	range: RangeFilter = {},
+	options: ClientBreakdownOptions & { groupBy?: "country" | "city" } = {},
+) {
+	const conditions = [eq(requestLogs.projectId, projectId)];
+	if (range.from) conditions.push(gte(requestLogs.timestamp, range.from));
+	if (range.to) conditions.push(lte(requestLogs.timestamp, range.to));
+
+	const groupCity = options.groupBy === "city";
+
+	return db
+		.select({
+			countryCode: requestLogs.countryCode,
+			countryName: requestLogs.countryName,
+			...(groupCity ? { city: requestLogs.city } : { city: sql<null>`NULL` }),
+			totalRequests: count(),
+			totalAllRequests: sql<number>`SUM(COUNT(*)) OVER ()`,
+			errorCount: sql<number>`COALESCE(SUM(${requestLogs.errorCount}), 0)`,
+			avgLatencyMs: sql<number | null>`AVG(${requestLogs.elapsedMs})`,
+			p95LatencyMs: sql<
+				number | null
+			>`PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ${requestLogs.elapsedMs})`,
+		})
+		.from(requestLogs)
+		.where(and(...conditions))
+		.groupBy(
+			requestLogs.countryCode,
+			requestLogs.countryName,
+			...(groupCity ? [requestLogs.city] : []),
+		)
+		.orderBy(desc(count()))
+		.limit(options.limit ?? 50)
+		.offset(options.offset ?? 0);
+}
+
+/**
+ * Per-operation request cardinality — distinct variable combinations,
+ * response shapes and visitor IPs. Feeds cacheability / usage-diversity
+ * insights (equivalent of Stellate's cache-hit-rate inputs).
+ */
+export async function getOperationCardinality(
+	db: Db,
+	projectId: string,
+	range: RangeFilter = {},
+	options: { limit?: number } = {},
+) {
+	const conditions = [eq(requestLogs.projectId, projectId)];
+	if (range.from) conditions.push(gte(requestLogs.timestamp, range.from));
+	if (range.to) conditions.push(lte(requestLogs.timestamp, range.to));
+
+	return db
+		.select({
+			operationName: requestLogs.operationName,
+			totalRequests: count(),
+			distinctVariables: sql<number>`COUNT(DISTINCT ${requestLogs.variableHash})`,
+			distinctResponses: sql<number>`COUNT(DISTINCT ${requestLogs.responseHash})`,
+			distinctIps: sql<number>`COUNT(DISTINCT ${requestLogs.ip})`,
+		})
+		.from(requestLogs)
+		.where(and(...conditions))
+		.groupBy(requestLogs.operationName)
+		.orderBy(desc(count()))
+		.limit(options.limit ?? 10);
 }
 
 export async function getDashboard(

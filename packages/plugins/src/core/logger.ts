@@ -213,6 +213,7 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 	const fetch = options.fetch ?? globalThis.fetch;
 	const endpoint = resolveEndpoint(options);
 	const sendVariablesAsHash = options.sendVariablesAsHash ?? true;
+	const anonymize = options.anonymize ?? false;
 	const shouldSyncSchema = options.schemaSyncing ?? true;
 	const flush = options.flush ?? "background";
 	const waitUntil = options.waitUntil;
@@ -243,6 +244,7 @@ export function createPatiomLogger(options: PatiomLoggerOptions): Logger {
 			const payload = extractPatiomPayload({
 				...payloadOptions,
 				sendVariablesAsHash,
+				anonymize,
 				schemaHash: getSchemaHash(),
 			});
 			const retry = flush !== "blocking";
