@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { and, getDb, desc, eq, gt, schema } from "@/lib/db";
+import { and, desc, eq, getDb, gt, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const getProjectErrors = createServerFn({ method: "GET" })

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { Db } from "@patiom/db";
 import type { PatiomAuth } from "@patiom/auth";
+import type { Db } from "@patiom/db";
 
 // workerd isolates I/O per request, so the Hyperdrive-backed DB client (and
 // the better-auth instance bound to it) must live inside the request

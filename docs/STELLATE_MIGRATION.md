@@ -59,6 +59,23 @@ every log is attributed to the **exact schema version** that served the request
 
 Errors: `401` for a missing/invalid token, `400` for an invalid JSON body.
 
+## Verified competitive facts
+
+All claims below are sourced; do not state them without a source.
+
+| Claim | Source |
+| --- | --- |
+| The Guild acquired Stellate (Sep 2024); the Metrics product is being merged into GraphQL Hive, the CDN continues under The Guild | [stellate.co/blog/stellate-has-been-acquired](https://stellate.co/blog/stellate-has-been-acquired), [the-guild.dev announcement](https://the-guild.dev/graphql/hive/blog/stellate-acquisition) |
+| The `stellate` client plugin sends the **raw IP** (`x-forwarded-for[0]` → `true-client-ip` → `x-real-ip`) in the `/log` payload; the only client-side hashing is djb2 (exported as `createBlake3Hash`) over variables/response/field values | `stellate@3.2.28` dist source (`dist/graphql-yoga.js` et al.) |
+| Stellate's server **hashes the IP with SHA-256 before storing** | [Metrics Logging API docs](https://stellate.co/docs/reference/logging), `ip` field note |
+| Stellate never stores variable values (replaced by names; hard-coded arguments converted to variables) | [Query Anonymization docs](https://stellate.co/docs/graphql-metrics/query-anonymization) |
+| Stellate's geo dimensions are **country + continent only — no city** (also `edgeLocation`/`region`, which are their edge PoPs, not client geo) | live introspection of `graph.stellate.co` (Public API schema): `Metrics.byCountry`, `Metrics.byContinent`; no city field exists |
+| The IP→geo provider Stellate uses server-side is **not publicly known** (closed source; their edge runs on Cloudflare, so edge-derived geo is plausible but unverified) | — |
+
+Patiom differentiators that fall out of this: country + **city** geo resolution
+(and lat/long), per-request **schema version** attribution, and privacy parity —
+Patiom's SHA-256 IP handling matches Stellate's documented behavior.
+
 ## Privacy note
 
 Your server forwards end-user IP addresses from your own request headers

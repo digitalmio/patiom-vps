@@ -13,7 +13,7 @@ import {
 } from "@patiom/db";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { getDb, eq, schema } from "@/lib/db";
+import { eq, getDb, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 async function assertProjectAccess(projectId: string, userId: string) {
@@ -92,7 +92,10 @@ export const projectSchemaUsage = createServerFn({ method: "GET" })
 	.inputValidator(projectIdWithRange)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getSchemaUsage(getDb(), data.projectId, { from: data.from, to: data.to });
+		return getSchemaUsage(getDb(), data.projectId, {
+			from: data.from,
+			to: data.to,
+		});
 	});
 
 export const projectFieldVersionHistory = createServerFn({ method: "GET" })
@@ -173,7 +176,10 @@ export const projectDashboard = createServerFn({ method: "GET" })
 	.inputValidator(projectIdWithRange)
 	.handler(async ({ context, data }) => {
 		await assertProjectAccess(data.projectId, context.user.id);
-		return getDashboard(getDb(), data.projectId, { from: data.from, to: data.to });
+		return getDashboard(getDb(), data.projectId, {
+			from: data.from,
+			to: data.to,
+		});
 	});
 
 export const projectClients = createServerFn({ method: "GET" })

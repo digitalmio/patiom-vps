@@ -61,7 +61,13 @@ first real deploy. Landing page + data/privacy page on `patiom.dev`.
 - Polar billing live and **tested with a real checkout** (subscription,
   webhooks, entitlement sync).
 - Draft SEO comparison pages early enough to rank when the clock starts:
-  "Apollo Studio alternative", "GraphQL Hive alternative".
+  "Apollo Studio alternative", "GraphQL Hive alternative",
+  "Stellate alternative".
+- Competitive note (sourced, see docs/STELLATE_MIGRATION.md): The Guild
+  acquired Stellate (Sep 2024) and is merging its Metrics into GraphQL Hive —
+  "one-line migration off Stellate" is the wedge. Verified gaps we fill:
+  country + **city** geo (Stellate is country/continent only), per-request
+  schema-version attribution. Privacy parity: both hash IPs with SHA-256.
 - Launch assets: demo GIF/video, HN draft, Product Hunt gallery.
 
 ### Phase 4 — Public launch (day 0)

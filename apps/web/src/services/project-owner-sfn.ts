@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { getDb, eq, schema } from "@/lib/db";
+import { eq, getDb, schema } from "@/lib/db";
 import { isAuthenticatedMiddleware } from "./auth-middleware";
 
 export const isProjectOwner = createServerFn({ method: "GET" })
